@@ -48,6 +48,7 @@ fun MetroTimetableScreen(
     line: MetroLineRow,
     times: Map<String, List<MetroTime>>,
     official: List<com.enddream.tracing.data.MetroText.Official>,
+    selfLineIds: Set<String>,
     minuteOfDay: Int,
     initialReverse: Boolean,
     onBack: () -> Unit
@@ -55,7 +56,7 @@ fun MetroTimetableScreen(
     val ownIds = line.stations.map { it.si }.toSet()
     val perStation = line.stations.associate { st ->
         st.si to times[st.si].orEmpty()
-            .filter { (it.lineId.isEmpty() || it.lineId in ownIds) && it.toward in ownIds }
+            .filter { (selfLineIds.isEmpty() || it.lineId in selfLineIds) && it.toward in ownIds }
     }
     val head = line.stations.firstOrNull()
     val tail = line.stations.lastOrNull()

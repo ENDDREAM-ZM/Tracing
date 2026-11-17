@@ -368,6 +368,7 @@ fun MetroPage(
                 line = line,
                 times = state.times,
                 official = state.official,
+                selfLineIds = lineIdsOf(state.lineIdMap, line),
                 minuteOfDay = state.minuteOfDay,
                 initialReverse = state.reverse,
                 onBack = { showTimetable = false }
