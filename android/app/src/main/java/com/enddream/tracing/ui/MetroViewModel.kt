@@ -358,7 +358,13 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     ): Pair<Map<String, List<MetroTime>>, Map<String, Pair<String, String>>> {
         val merged = HashMap<String, List<MetroTime>>(times)
         val fallback = HashMap<String, Pair<String, String>>()
-        val fetched = lines.map { line ->
+        val need = lines.filter { line ->
+            val own = ownLineIds(line)
+            line.stations.any { st ->
+                times[st.si].orEmpty().none { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
+            }
+        }
+        val fetched = need.map { line ->
             line to viewModelScope.async {
                 var detail: com.enddream.tracing.data.api.RouteDetail? = null
                 for (n in listOf("地铁${line.name}", line.name).distinct()) {
