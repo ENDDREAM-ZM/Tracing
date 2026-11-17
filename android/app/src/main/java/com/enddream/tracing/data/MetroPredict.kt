@@ -131,8 +131,7 @@ object MetroPredict {
                     si = st.si,
                     lat = st.lat,
                     lng = st.lng,
-                    door = st.door,
-                    building = st.building
+                    door = st.door
                 )
             )
 
