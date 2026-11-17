@@ -77,7 +77,14 @@ data class RouteDetail(
     val planTime: String = "",
     val routeColor: String = "",
     val commonts: String = "",
+    val firstLast: List<FirstLast> = emptyList(),
     val data: List<Station> = emptyList()
+)
+
+@Serializable
+data class FirstLast(
+    val first: String = "",
+    val last: String = ""
 )
 
 @Serializable

@@ -65,6 +65,13 @@ fun MetroPage(
     val state by vm.state.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     var alertStation by remember { mutableStateOf<String?>(null) }
+    val alertKey = state.selectedLine?.fullName.orEmpty() + "|" + if (state.reverse) 2 else 1
+    LaunchedEffect(alertKey) {
+        alertStation = com.enddream.tracing.data.AlertStore.get(
+            state.selectedLine?.fullName.orEmpty(),
+            if (state.reverse) 2 else 1
+        )
+    }
     var alerted by remember { mutableStateOf(false) }
     var detailStation by remember { mutableStateOf<com.enddream.tracing.data.RailRow.Station?>(null) }
     var showTimetable by remember { mutableStateOf(false) }
@@ -99,8 +106,8 @@ fun MetroPage(
             Notify.fire(
                 ctx,
                 ("metro|${line.fullName}|$target").hashCode(),
-                "${line.fullName} 即将到站",
-                "$target 列车即将到站，请准备下车"
+                "${displayMetroLine(line.fullName)} 到站提醒",
+                "车辆即将到达 $target 站，请准备上下车"
             )
         }
     }
@@ -215,11 +222,20 @@ fun MetroPage(
                                 }
                             )
                         }
+                        PullRefresh(
+                            refreshing = state.loading,
+                            onRefresh = { vm.reload() }
+                        ) {
                         RailList(
                             rows = rows,
                             alertStation = alertStation,
                             onAlert = { name ->
                                 alertStation = if (alertStation == name) null else name
+                                com.enddream.tracing.data.AlertStore.set(
+                                    state.selectedLine?.fullName.orEmpty(),
+                                    if (state.reverse) 2 else 1,
+                                    alertStation
+                                )
                                 alerted = false
                                 onAskNotify()
                             },
@@ -229,6 +245,7 @@ fun MetroPage(
                             lineColor = line.color.toComposeColor(),
                             onStationClick = { st -> detailStation = st }
                         )
+                        }
                     }
                 }
 

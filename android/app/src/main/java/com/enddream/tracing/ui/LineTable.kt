@@ -37,7 +37,11 @@ fun displayLine(name: String): String {
 }
 
 @Composable
-fun LineTableHeader(showLineCol: Boolean = true, withFav: Boolean = false) {
+fun LineTableHeader(
+    showLineCol: Boolean = true,
+    withFav: Boolean = false,
+    showCurrentCol: Boolean = true
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -54,7 +58,7 @@ fun LineTableHeader(showLineCol: Boolean = true, withFav: Boolean = false) {
             )
         }
         CellLabel("起始站")
-        CellLabel("当前站")
+        if (showCurrentCol) CellLabel("当前站")
         CellLabel("终点站")
         if (withFav) Spacer(Modifier.width(FavColW))
     }
@@ -79,6 +83,7 @@ fun LineTableRow(
     current: String,
     to: String,
     showLineCol: Boolean = true,
+    showCurrentCol: Boolean = true,
     onOpen: () -> Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -102,10 +107,12 @@ fun LineTableRow(
             }
         }
         CellText(from)
-        CellText(
-            current.ifBlank { "—" },
-            color = if (current.isBlank()) TextMuted else MaterialTheme.colorScheme.primary
-        )
+        if (showCurrentCol) {
+            CellText(
+                current.ifBlank { "—" },
+                color = if (current.isBlank()) TextMuted else MaterialTheme.colorScheme.primary
+            )
+        }
         CellText(to)
         trailing?.invoke()
     }

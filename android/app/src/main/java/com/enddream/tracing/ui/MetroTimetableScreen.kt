@@ -129,16 +129,14 @@ fun MetroTimetableScreen(
             ) {
                 if (forwardOk) {
                     DirectionTab(
-                        from = head?.name.orEmpty(),
-                        to = tail?.name.orEmpty(),
+                        label = "往「${tail?.name.orEmpty()}」方向",
                         selected = !reverse,
                         onClick = { reverse = false }
                     )
                 }
                 if (backwardOk) {
                     DirectionTab(
-                        from = tail?.name.orEmpty(),
-                        to = head?.name.orEmpty(),
+                        label = "往「${head?.name.orEmpty()}」方向",
                         selected = reverse,
                         onClick = { reverse = true }
                     )
@@ -190,8 +188,7 @@ fun MetroTimetableScreen(
 
 @Composable
 private fun DirectionTab(
-    from: String,
-    to: String,
+    label: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -206,18 +203,7 @@ private fun DirectionTab(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            from,
-            style = MaterialTheme.typography.labelLarge,
-            color = fg,
-            maxLines = 1
-        )
-        Text(
-            " → ",
-            style = MaterialTheme.typography.labelLarge,
-            color = fg.copy(alpha = 0.7f)
-        )
-        Text(
-            to,
+            label,
             style = MaterialTheme.typography.labelLarge,
             color = fg,
             maxLines = 1

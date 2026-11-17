@@ -49,12 +49,11 @@ fun BusTimetableScreen(
 
     val start = detail?.data?.firstOrNull()?.let { it.stationName.ifBlank { it.showName } }.orEmpty()
     val end = detail?.data?.lastOrNull()?.let { it.stationName.ifBlank { it.showName } }.orEmpty()
-    val times = remember(detail) {
-        MetroTimetable.busTimeline(
-            detail?.beginTime.orEmpty(),
-            detail?.endTime.orEmpty()
-        )
-    }
+    val first = detail?.beginTime.orEmpty()
+        .ifBlank { detail?.firstLast?.firstOrNull()?.first.orEmpty() }
+    val last = detail?.endTime.orEmpty()
+        .ifBlank { detail?.firstLast?.firstOrNull()?.last.orEmpty() }
+    val times = remember(detail) { MetroTimetable.busTimeline(first, last) }
 
     Box(Modifier.fillMaxSize()) {
         GlassFrosted(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp)) {}
@@ -101,9 +100,9 @@ fun BusTimetableScreen(
             ) {
                 Column(Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TimeBadge(true, detail?.beginTime.orEmpty().ifBlank { "—" }, 11)
+                        TimeBadge(true, first.ifBlank { "—" }, 11)
                         Spacer(Modifier.width(10.dp))
-                        TimeBadge(false, detail?.endTime.orEmpty().ifBlank { "—" }, 11)
+                        TimeBadge(false, last.ifBlank { "—" }, 11)
                         Spacer(Modifier.weight(1f))
                         Text(
                             if (detail?.planTime.orEmpty().isNotBlank())
@@ -127,12 +126,38 @@ fun BusTimetableScreen(
                 shape = RoundedCornerShape(20.dp)
             ) {
                 if (times.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "该线路暂无时刻表数据",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextMuted
-                        )
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            Text(
+                                "该线路未提供首末班数据，下列为全部站点",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextMuted,
+                                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
+                            )
+                        }
+                        itemsIndexed(detail?.data.orEmpty()) { i, st ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "${i + 1}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 11.sp,
+                                    color = TextMuted,
+                                    modifier = Modifier.width(24.dp)
+                                )
+                                Text(
+                                    st.stationName.ifBlank { st.showName },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        item { Spacer(Modifier.height(10.dp)) }
                     }
                 } else {
                     LazyColumn(Modifier.fillMaxSize()) {

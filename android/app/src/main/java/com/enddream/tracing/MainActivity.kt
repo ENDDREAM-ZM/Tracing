@@ -356,7 +356,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                                 )
                             },
                             onLocate = { locateTick++ },
-                            onPullRefresh = { busVm.refresh() }
+                            onPullRefresh = {
+                                busVm.refresh()
+                                locateTick++
+                            }
                         )
                     }
 

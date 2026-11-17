@@ -192,7 +192,7 @@ class BusViewModel(private val api: BusApi = BusApi()) : ViewModel() {
             .filter { it.index in 0..(order - 1) }
             .maxByOrNull { it.index }
         if (nearest != null && nearest.stationName.isNotBlank()) {
-            if (nearest.statusType == "0") return "${nearest.stationName} 到站"
+            if (nearest.statusType == "0") return nearest.stationName
             val d = RouteCache.cached(city, cl.lineName, cl.direction)
             val prev = d?.data?.getOrNull(nearest.index - 1)
                 ?.let { it.stationName.ifBlank { it.showName } }
@@ -320,7 +320,7 @@ class FavoriteViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         val cur = when {
             nearest == null -> res?.routeOnStationRTimeInfoList?.firstOrNull()?.busToStationTips.orEmpty()
             nearest.stationName.isBlank() -> ""
-            nearest.statusType == "0" -> "${nearest.stationName} 到站"
+            nearest.statusType == "0" -> nearest.stationName
             else -> prevName?.takeIf { it.isNotBlank() } ?: nearest.stationName
         }
         val list = _cards.value.toMutableList()

@@ -151,7 +151,7 @@ fun BusPage(
                                     )
                                 } else {
                                     Column {
-                                        LineTableHeader()
+                                        LineTableHeader(showCurrentCol = false)
                                         state.lines.take(80).forEach { line ->
                                             TableDivider()
                                             LineTableRow(
@@ -159,6 +159,7 @@ fun BusPage(
                                                 from = line.from,
                                                 current = "",
                                                 to = line.to,
+                                                showCurrentCol = false,
                                                 onOpen = { onOpenCityLine(line) }
                                             )
                                         }

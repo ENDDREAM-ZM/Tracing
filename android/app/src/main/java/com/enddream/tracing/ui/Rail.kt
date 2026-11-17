@@ -181,6 +181,12 @@ private fun StationLineRow(
                             Size(half * 2f, lower - size.height / 2f)
                         )
                     }
+                    if (station.first) {
+                        drawCircle(railColor(station.after), half, Offset(cx, pad))
+                    }
+                    if (station.last) {
+                        drawCircle(railColor(station.before), half, Offset(cx, size.height - pad))
+                    }
                 }
         )
 

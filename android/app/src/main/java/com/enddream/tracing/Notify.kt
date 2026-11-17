@@ -62,24 +62,37 @@ object Notify {
         vibrate(ctx)
     }
 
+    fun vibrator(ctx: Context): Vibrator? = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vm = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vm.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+    }.getOrNull()
+
     fun vibrate(ctx: Context) {
         runCatching {
-            val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vm = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vm.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
+            val v = vibrator(ctx) ?: return
             if (!v.hasVibrator()) return
+            val pattern = longArrayOf(0, 500, 300, 500, 300, 500)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(
-                    VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)
-                )
+                v.vibrate(VibrationEffect.createWaveform(pattern, 0))
             } else {
                 @Suppress("DEPRECATION")
-                v.vibrate(longArrayOf(0, 400, 200, 400), -1)
+                v.vibrate(pattern, 0)
             }
+            Thread {
+                runCatching {
+                    Thread.sleep(6000L)
+                    v.cancel()
+                }
+            }.start()
         }
+    }
+
+    fun stop(ctx: Context) {
+        runCatching { vibrator(ctx)?.cancel() }
     }
 }

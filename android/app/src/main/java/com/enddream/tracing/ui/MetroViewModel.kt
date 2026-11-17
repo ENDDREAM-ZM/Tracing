@@ -155,6 +155,11 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         }
     }
 
+    fun reload() {
+        val mc = _state.value.city ?: return
+        selectCity(mc)
+    }
+
     fun refresh() {
         val mc = _state.value.city
         if (mc != null && _state.value.lines.isEmpty()) selectCity(mc)

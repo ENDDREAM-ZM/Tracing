@@ -116,12 +116,12 @@ fun SettingsScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { showSources = true }
+                    .clickable { showThanks = true }
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "数据来源",
+                    "致谢",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
@@ -136,32 +136,12 @@ fun SettingsScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing") }
+                    .clickable { showSources = true }
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "项目地址",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "github.com/ENDDREAM-ZM/Tracing",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { showThanks = true }
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "致谢",
+                    "数据来源",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
@@ -197,6 +177,26 @@ fun SettingsScreen(
                     "›",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted
+                )
+            }
+            RowDivider()
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing") }
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "项目地址",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "github.com/ENDDREAM-ZM/Tracing",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }

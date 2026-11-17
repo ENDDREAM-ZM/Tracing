@@ -68,7 +68,7 @@ fun NavPage(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "点击「前往」，从当前位置开始步行导航（默认步行，可切换）",
+                    "从当前位置开始步行导航（可切换模式）",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted
                 )

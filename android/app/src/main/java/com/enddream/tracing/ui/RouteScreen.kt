@@ -66,7 +66,9 @@ fun RouteScreen(
     val scope = rememberCoroutineScope()
     var isFav by remember { mutableStateOf(false) }
     var dir by remember { mutableIntStateOf(direction) }
-    var alertStation by remember { mutableStateOf<String?>(null) }
+    var alertStation by remember(line, dir) {
+        mutableStateOf(com.enddream.tracing.data.AlertStore.get(line, dir))
+    }
     var alerted by remember { mutableStateOf(false) }
     var navStation by remember { mutableStateOf<com.enddream.tracing.data.RailRow.Station?>(null) }
     var picked by remember(city, line, dir) { mutableStateOf(highlightStation.orEmpty()) }
@@ -113,8 +115,8 @@ fun RouteScreen(
             Notify.fire(
                 ctx,
                 ("$line|$target").hashCode(),
-                "${displayLine(line)} 即将到站",
-                "$target 车辆即将到站，请准备下车"
+                "${displayLine(line)} 到站提醒",
+                "车辆即将到达 $target 站，请准备上下车"
             )
         }
     }
@@ -309,11 +311,19 @@ fun RouteScreen(
                             val rows = remember(d, state.buses, state.speeds) {
                                 RouteRows.build(d, state.buses, state.speeds)
                             }
+                            PullRefresh(
+                                refreshing = state.loading,
+                                onRefresh = {
+                                    vm.load(city, line, dir)
+                                    vm.loadRealtime(city, line, dir)
+                                }
+                            ) {
                             RailList(
                                 rows = rows,
                                 alertStation = alertStation,
                                 onAlert = { name ->
                                     alertStation = if (alertStation == name) null else name
+                                    com.enddream.tracing.data.AlertStore.set(line, dir, alertStation)
                                     alerted = false
                                 },
                                 modifier = Modifier.padding(vertical = 6.dp),
@@ -325,6 +335,7 @@ fun RouteScreen(
                                     navStation = st
                                 }
                             )
+                            }
                         }
                     }
                 }
