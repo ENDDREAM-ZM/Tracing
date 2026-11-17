@@ -163,87 +163,6 @@ object MetroTimetable {
         return String.format("%02d:%02d", h, m)
     }
 
-    fun deltas(
-        first: String,
-        last: String,
-        nowMinute: Int,
-        peak: Boolean,
-        count: Int = 2
-    ): List<Int> {
-        val f = toMin(first) ?: return emptyList()
-        val l = toMin(last) ?: return emptyList()
-        if (l < f) return emptyList()
-        if (nowMinute < f || nowMinute > l) return emptyList()
-        val headway = if (peak) PEAK_HEADWAY else OFF_PEAK_HEADWAY
-        var cur = f
-        if (nowMinute > f) cur = f + ((nowMinute - f + headway - 1) / headway) * headway
-        val out = ArrayList<Int>(count)
-        var guard = 0
-        while (out.size < count && cur <= l && guard < 64) {
-            guard++
-            out.add(cur - nowMinute)
-            cur += headway
-        }
-        return out
-    }
-
-    fun nextTwo(
-        first: String,
-        last: String,
-        nowMinute: Int,
-        peak: Boolean
-    ): List<String> {
-        val f = toMin(first) ?: return emptyList()
-        val l = toMin(last) ?: return emptyList()
-        if (l < f) return emptyList()
-        val headway = if (peak) PEAK_HEADWAY else OFF_PEAK_HEADWAY
-        var t = f
-        if (nowMinute > f) {
-            val gap = nowMinute - f
-            val k = (gap + headway - 1) / headway
-            t = f + k * headway
-        }
-        val out = ArrayList<String>(2)
-        while (out.size < 2 && t <= l) {
-            out.add(fmt(t))
-            t += headway
-        }
-        if (out.isEmpty() && nowMinute > l) return emptyList()
-        return out
-    }
-
-    fun busTimeline(first: String, last: String): List<String> {
-        val f = toMin(first) ?: return emptyList()
-        val l = toMin(last) ?: return emptyList()
-        if (l < f) return emptyList()
-        val headway = 10
-        val out = ArrayList<String>()
-        var t = f
-        var guard = 0
-        while (t <= l && guard < 200) {
-            guard++
-            out.add(fmt(t))
-            t += headway
-        }
-        return out
-    }
-
-    fun timeline(first: String, last: String, peak: Boolean): List<String> {
-        val f = toMin(first) ?: return emptyList()
-        val l = toMin(last) ?: return emptyList()
-        if (l < f) return emptyList()
-        val headway = if (peak) PEAK_HEADWAY else OFF_PEAK_HEADWAY
-        val out = ArrayList<String>()
-        var t = f
-        var guard = 0
-        while (t <= l && guard < 400) {
-            guard++
-            out.add(fmt(t))
-            t += headway
-        }
-        return out
-    }
-
     fun twoArrivals(
         first: String,
         last: String,
@@ -278,12 +197,6 @@ object MetroTimetable {
         val l = times.mapNotNull { toMin(it.last) }
         if (f.isEmpty() || l.isEmpty()) return null
         return f.min() to l.max()
-    }
-
-    fun stateText(times: List<MetroTime>, nowMinute: Int): String {
-        val lasts = times.mapNotNull { toMin(it.last) }
-        if (lasts.isEmpty()) return "—"
-        return if (nowMinute > lasts.max()) "已停运" else "—"
     }
 
     fun firstLastOf(times: List<MetroTime>): Pair<String, String>? {
