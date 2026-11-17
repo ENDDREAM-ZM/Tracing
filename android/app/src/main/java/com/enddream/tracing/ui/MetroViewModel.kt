@@ -358,13 +358,7 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     ): Pair<Map<String, List<MetroTime>>, Map<String, Pair<String, String>>> {
         val merged = HashMap<String, List<MetroTime>>(times)
         val fallback = HashMap<String, Pair<String, String>>()
-        val need = lines.filter { line ->
-            val own = ownLineIds(line)
-            line.stations.any { st ->
-                times[st.si].orEmpty().none { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
-            }
-        }
-        val fetched = need.map { line ->
+        val fetched = lines.map { line ->
             line to viewModelScope.async {
                 var detail: com.enddream.tracing.data.api.RouteDetail? = null
                 for (n in listOf("地铁${line.name}", line.name).distinct()) {
@@ -378,17 +372,21 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
             if (d == null) continue
             val own = ownLineIds(line)
             val lid = own.firstOrNull().orEmpty()
-            d.firstLast.firstOrNull()?.let { fl ->
-                if (fl.first.isNotBlank() && fl.last.isNotBlank()) {
-                    fallback[line.fullName] = fl.first to fl.last
+            val table = MetroText.stationTable(d.commonts)
+            if (table == null) {
+                d.firstLast.firstOrNull()?.let { fl ->
+                    if (fl.first.isNotBlank() && fl.last.isNotBlank()) {
+                        fallback[line.fullName] = fl.first to fl.last
+                    }
                 }
+                continue
             }
-            val table = MetroText.stationTable(d.commonts) ?: continue
             val tail = stationOf(line, table.directions.firstOrNull().orEmpty())
             val head = stationOf(line, table.directions.getOrNull(1).orEmpty())
+            val firsts = ArrayList<String>()
+            val lasts = ArrayList<String>()
             for (row in table.rows) {
                 val st = stationOf(line, row.name) ?: continue
-                if (ownTimesOf(line, st).isNotEmpty()) continue
                 val add = ArrayList<MetroTime>(2)
                 val atTail = tail != null && st.si == tail.si
                 val atHead = head != null && st.si == head.si
@@ -398,7 +396,21 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                 if (!atHead && row.secondToward.first.isNotBlank() && row.secondToward.second.isNotBlank()) {
                     add.add(MetroTime(lid, row.secondToward.first, row.secondToward.second, head?.si.orEmpty()))
                 }
-                if (add.isNotEmpty()) merged[st.si] = merged[st.si].orEmpty() + add
+                if (add.isEmpty()) continue
+                merged[st.si] = merged[st.si].orEmpty().filter { it.lineId.isNotEmpty() && it.lineId !in own } + add
+                if (!atTail) {
+                    firsts.add(row.firstToward.first)
+                    lasts.add(row.firstToward.second)
+                }
+                if (!atHead) {
+                    firsts.add(row.secondToward.first)
+                    lasts.add(row.secondToward.second)
+                }
+            }
+            val first = firsts.mapNotNull { MetroTimetable.parseClock(it) }.filter { it < 24 * 60 }.minOrNull()
+            val last = lasts.mapNotNull { MetroTimetable.parseClock(it) }.filter { it < 24 * 60 }.maxOrNull()
+            if (first != null && last != null && last > first) {
+                fallback[line.fullName] = MetroTimetable.formatClock(first) to MetroTimetable.formatClock(last)
             }
         }
         return merged to fallback
