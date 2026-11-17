@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import com.enddream.tracing.data.MetroText
 import okhttp3.Request
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -71,7 +72,7 @@ class MetroApi {
                     bus["risk_time_des"]?.jsonPrimitive?.contentOrNull,
                     bus["time_tag_des"]?.jsonPrimitive?.contentOrNull
                 ).map { it.trim() }.filter { it.isNotBlank() }
-                parts.joinToString("\n")
+                MetroText.dedupe(parts.joinToString("\n"))
             }
         }.getOrDefault("")
     }
