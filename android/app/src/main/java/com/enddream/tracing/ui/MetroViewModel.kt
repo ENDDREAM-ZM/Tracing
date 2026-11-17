@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.enddream.tracing.data.MetroLineRow
 import com.enddream.tracing.data.MetroParser
+import com.enddream.tracing.data.MetroStationRow
 import com.enddream.tracing.data.MetroText
 import com.enddream.tracing.data.MetroTime
 import com.enddream.tracing.data.MetroTimetable
@@ -11,6 +12,7 @@ import com.enddream.tracing.data.NetTime
 import com.enddream.tracing.data.api.BusApi
 import com.enddream.tracing.data.api.MetroApi
 import com.enddream.tracing.data.api.MetroCity
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +42,7 @@ data class MetroUiState(
     val linePrice: Double = 0.0,
     val linePriceMin: Double = 0.0,
     val noticeLoading: Boolean = false,
+    val firstLastFallback: Map<String, Pair<String, String>> = emptyMap(),
     val tick: Int = 0
 )
 
@@ -145,7 +148,8 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                 lineLength = 0,
                 linePrice = 0.0,
                 linePriceMin = 0.0,
-                noticeText = null
+                noticeText = null,
+                firstLastFallback = emptyMap()
             )
             val spell = spellMap[city.adcode].orEmpty()
             if (spell.isBlank()) {
@@ -162,11 +166,16 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
             val infoRaw = api.metroInfo(city.adcode, spell)
             val times = if (infoRaw.isNullOrBlank()) emptyMap() else MetroParser.parseTimes(infoRaw)
             _state.value = _state.value.copy(
-                loading = false,
                 lines = lines,
                 lineIdMap = idMap,
                 times = times,
                 error = if (lines.isEmpty()) "该城市暂无地铁线网数据" else null
+            )
+            val filled = fillMissing(lines, times)
+            _state.value = _state.value.copy(
+                loading = false,
+                times = filled.first,
+                firstLastFallback = filled.second
             )
         }
     }
@@ -197,12 +206,19 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
             val times = if (infoRaw.isNullOrBlank()) emptyMap() else MetroParser.parseTimes(infoRaw)
             val again = lines.firstOrNull { it.fullName == cur.fullName } ?: cur
             _state.value = _state.value.copy(
-                loading = false,
                 lines = lines,
                 lineIdMap = idMap,
                 times = times,
                 selectedLine = again
             )
+            if (_state.value.firstLastFallback.isEmpty()) {
+                val filled = fillMissing(lines, times)
+                _state.value = _state.value.copy(
+                    loading = false,
+                    times = filled.first,
+                    firstLastFallback = filled.second
+                )
+            }
             loadLineExt(again)
             loadNotice(again, if (_state.value.reverse) 2 else 1)
         }
@@ -295,7 +311,7 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                     }
                 }
             }
-            _state.value = _state.value.copy(noticeText = text, noticeLoading = false)
+            _state.value = _state.value.copy(noticeText = MetroText.dedupe(text), noticeLoading = false)
         }
     }
 
@@ -325,10 +341,76 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         val own = ownLineIds(line)
         val all = line.stations.flatMap { st ->
             _state.value.times[st.si].orEmpty()
-                .filter { it.lineId.isEmpty() || it.lineId in own }
+                .filter { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
         }
-        return MetroTimetable.firstLastOf(all)
+        return _state.value.firstLastFallback[line.fullName] ?: MetroTimetable.firstLastOf(all)
     }
+
+    private fun ownTimesOf(line: MetroLineRow, st: MetroStationRow): List<MetroTime> {
+        val own = ownLineIds(line)
+        return _state.value.times[st.si].orEmpty()
+            .filter { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
+    }
+
+    private suspend fun fillMissing(
+        lines: List<MetroLineRow>,
+        times: Map<String, List<MetroTime>>
+    ): Pair<Map<String, List<MetroTime>>, Map<String, Pair<String, String>>> {
+        val merged = HashMap<String, List<MetroTime>>(times)
+        val fallback = HashMap<String, Pair<String, String>>()
+        val need = lines.filter { line ->
+            val own = ownLineIds(line)
+            line.stations.any { st ->
+                times[st.si].orEmpty().none { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
+            }
+        }
+        val fetched = need.map { line ->
+            line to viewModelScope.async {
+                var detail: com.enddream.tracing.data.api.RouteDetail? = null
+                for (n in listOf("地铁${line.name}", line.name).distinct()) {
+                    detail = runCatching { api.routeDetail(cityName(), n, 1) }.getOrNull()
+                    if (detail?.routeName?.isNotBlank() == true) break
+                }
+                detail?.takeIf { it.routeName.isNotBlank() }
+            }
+        }.map { it.first to it.second.await() }
+        for ((line, d) in fetched) {
+            if (d == null) continue
+            val own = ownLineIds(line)
+            val lid = own.firstOrNull().orEmpty()
+            d.firstLast.firstOrNull()?.let { fl ->
+                if (fl.first.isNotBlank() && fl.last.isNotBlank()) {
+                    fallback[line.fullName] = fl.first to fl.last
+                }
+            }
+            val table = MetroText.stationTable(d.commonts) ?: continue
+            val tail = stationOf(line, table.directions.firstOrNull().orEmpty())
+            val head = stationOf(line, table.directions.getOrNull(1).orEmpty())
+            for (row in table.rows) {
+                val st = stationOf(line, row.name) ?: continue
+                if (ownTimesOf(line, st).isNotEmpty()) continue
+                val add = ArrayList<MetroTime>(2)
+                val atTail = tail != null && st.si == tail.si
+                val atHead = head != null && st.si == head.si
+                if (!atTail && row.firstToward.first.isNotBlank() && row.firstToward.second.isNotBlank()) {
+                    add.add(MetroTime(lid, row.firstToward.first, row.firstToward.second, tail?.si.orEmpty()))
+                }
+                if (!atHead && row.secondToward.first.isNotBlank() && row.secondToward.second.isNotBlank()) {
+                    add.add(MetroTime(lid, row.secondToward.first, row.secondToward.second, head?.si.orEmpty()))
+                }
+                if (add.isNotEmpty()) merged[st.si] = merged[st.si].orEmpty() + add
+            }
+        }
+        return merged to fallback
+    }
+
+    private fun stationOf(line: MetroLineRow, name: String): MetroStationRow? {
+        val key = nameKey(name)
+        if (key.isBlank()) return null
+        return line.stations.firstOrNull { nameKey(it.name) == key }
+    }
+
+    private fun nameKey(text: String): String = text.filter { it.isLetterOrDigit() }
 
     private fun ownLineIds(line: MetroLineRow): Set<String> =
         _state.value.lineIdMap.entries.filter { it.value == line.fullName }
