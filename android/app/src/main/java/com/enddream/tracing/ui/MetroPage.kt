@@ -86,7 +86,7 @@ fun MetroPage(
 
     LaunchedEffect(state.selectedLine, state.reverse) {
         val line = state.selectedLine ?: return@LaunchedEffect
-        vm.loadNotice(line.name, if (state.reverse) 2 else 1)
+        vm.loadNotice(line, if (state.reverse) 2 else 1)
     }
 
     LaunchedEffect(state.selectedLine, alertStation, state.minuteOfDay) {
@@ -219,7 +219,10 @@ fun MetroPage(
                     }
                     Spacer(Modifier.height(8.dp))
                     GlassPanel(modifier = Modifier.weight(1f)) {
-                        val rows = remember(line, state.minuteOfDay, state.reverse, state.times, state.lineIdMap) {
+                        val rows = remember(
+                            line, state.minuteOfDay, state.tick, state.reverse,
+                            state.times, state.lineIdMap
+                        ) {
                             MetroPredict.rows(
                                 stations = line.stations,
                                 minuteOfDay = state.minuteOfDay,
@@ -367,7 +370,8 @@ fun MetroPage(
             MetroTimetableScreen(
                 line = line,
                 times = state.times,
-                official = state.official,
+                siNames = state.lines.flatMap { it.stations }
+                    .associate { it.si to it.name },
                 selfLineIds = lineIdsOf(state.lineIdMap, line),
                 minuteOfDay = state.minuteOfDay,
                 initialReverse = state.reverse,
@@ -404,7 +408,7 @@ fun MetroPage(
             text = {
                 Column {
                     Text(
-                        "是否导航到「${st.name}」站？",
+                        if (st.building) "此站点建设中，暂不可乘坐" else "是否导航到「${st.name}」站？",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
@@ -597,8 +601,15 @@ private fun SubHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
+        Spacer(Modifier.width(10.dp))
         if (firstLast != null) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 AlignedTime(true, firstLast.first)
@@ -698,18 +709,22 @@ private fun NoticeCard(text: String) {
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Box(
+            androidx.compose.foundation.Canvas(
                 Modifier
                     .padding(top = 4.dp)
-                    .size(13.dp)
-                    .background(accent, CircleShape),
-                contentAlignment = Alignment.Center
+                    .size(14.dp)
             ) {
-                Text(
-                    "!",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
-                    color = Color.White
+                drawCircle(accent)
+                val barH = size.height * 0.18f
+                val barW = size.width * 0.56f
+                drawRoundRect(
+                    color = Color.White,
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        (size.width - barW) / 2f,
+                        (size.height - barH) / 2f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(barW, barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(barH / 2f)
                 )
             }
             Spacer(Modifier.width(8.dp))

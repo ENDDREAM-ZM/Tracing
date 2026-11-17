@@ -239,6 +239,25 @@ private fun StationLineRow(
                         ),
                         modifier = Modifier.weight(1f, fill = false)
                     )
+                    if (station.building) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier
+                                .background(
+                                    Color(0xFFE5484D).copy(alpha = 0.12f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                "在建中",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = Color(0xFFE5484D),
+                                maxLines = 1
+                            )
+                        }
+                    }
                     if (station.transfers.isNotEmpty()) {
                         Spacer(Modifier.width(6.dp))
                         station.transfers.take(3).forEach { tf ->

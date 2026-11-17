@@ -156,6 +156,32 @@ fun SettingsScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
+                    .clickable { openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing") }
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "项目地址",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "打开",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "›",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted
+                )
+            }
+            RowDivider()
+            Row(
+                Modifier
+                    .fillMaxWidth()
                     .clickable(onClick = onOpenPermissions)
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -177,26 +203,6 @@ fun SettingsScreen(
                     "›",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted
-                )
-            }
-            RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing") }
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "项目地址",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "github.com/ENDDREAM-ZM/Tracing",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }

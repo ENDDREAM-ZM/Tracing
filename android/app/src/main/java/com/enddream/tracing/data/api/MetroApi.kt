@@ -8,6 +8,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Request
 import java.util.UUID
@@ -39,6 +40,40 @@ class MetroApi {
                 }.toMap()
             }
         }.getOrDefault(emptyMap())
+    }
+
+    suspend fun lineNotice(
+        lat1: Double,
+        lng1: Double,
+        poi1: String,
+        lat2: Double,
+        lng2: Double,
+        poi2: String
+    ): String = withContext(Dispatchers.IO) {
+        if (lat1 == 0.0 || lng1 == 0.0 || lat2 == 0.0 || lng2 == 0.0) return@withContext ""
+        val url = "https://webapi.amap.com/subway/service/navigation/busExt" +
+            "?x1=$lng1&y1=$lat1&x2=$lng2&y2=$lat2" +
+            "&poiid1=$poi1&poiid2=$poi2&uuid=${UUID.randomUUID().toString().replace("-", "")}" +
+            "&type=6&Ver=3"
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", UA)
+            .header("Referer", "https://m.amap.com/subway/")
+            .build()
+        runCatching {
+            client.newCall(req).execute().use { r ->
+                val root = json.parseToJsonElement(r.body?.string() ?: "{}").jsonObject
+                val bus = root["buslist"]?.jsonArray?.firstOrNull() as? JsonObject
+                    ?: return@use ""
+                val seg = bus["segmentlist"]?.jsonArray?.firstOrNull() as? JsonObject
+                val parts = listOfNotNull(
+                    seg?.get("bus_des")?.jsonPrimitive?.contentOrNull,
+                    bus["risk_time_des"]?.jsonPrimitive?.contentOrNull,
+                    bus["time_tag_des"]?.jsonPrimitive?.contentOrNull
+                ).map { it.trim() }.filter { it.isNotBlank() }
+                parts.joinToString("\n")
+            }
+        }.getOrDefault("")
     }
 
     suspend fun lineExt(

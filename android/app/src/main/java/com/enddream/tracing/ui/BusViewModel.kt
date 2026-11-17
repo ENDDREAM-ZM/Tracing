@@ -196,9 +196,10 @@ class BusViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         val current = _state.value.nearbyDetail
         if (current.isEmpty()) return
         currentJob?.cancel()
-        val i = roundRobin % current.size
-        roundRobin = (roundRobin + 1) % current.size
-        currentJob = viewModelScope.launch { updateCurrent(current[i].station, current[i].lines) }
+        _state.value = _state.value.copy(otherRound = _state.value.otherRound + 1)
+        currentJob = viewModelScope.launch {
+            current.forEach { item -> launch { updateCurrent(item.station, item.lines) } }
+        }
     }
 
     fun refreshAllCurrent() {

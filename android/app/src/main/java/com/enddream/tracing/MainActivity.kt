@@ -280,6 +280,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         }
     }
 
+    LaunchedEffect(refreshSec) { metroVm.refreshSec = refreshSec }
+
     LaunchedEffect(tab, refreshSec, entered) {
         if (!entered) return@LaunchedEffect
         if (tab == MainTab.METRO) {

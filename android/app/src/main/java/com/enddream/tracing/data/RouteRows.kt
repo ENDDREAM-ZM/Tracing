@@ -17,7 +17,8 @@ sealed interface RailRow {
         val si: String = "",
         val lat: Double = 0.0,
         val lng: Double = 0.0,
-        val door: String = ""
+        val door: String = "",
+        val building: Boolean = false
     ) : RailRow {
         override val key: String get() = "s-$order"
     }
@@ -161,6 +162,22 @@ object MetroTimetable {
         val h = (min / 60) % 24
         val m = min % 60
         return String.format("%02d:%02d", h, m)
+    }
+
+    fun timeline(first: String, last: String, peak: Boolean): List<String> {
+        val f = toMin(first) ?: return emptyList()
+        val l = toMin(last) ?: return emptyList()
+        if (l < f) return emptyList()
+        val headway = if (peak) PEAK_HEADWAY else OFF_PEAK_HEADWAY
+        val out = ArrayList<String>()
+        var t = f
+        var guard = 0
+        while (t <= l && guard < 400) {
+            guard++
+            out.add(fmt(t))
+            t += headway
+        }
+        return out
     }
 
     fun twoArrivals(
