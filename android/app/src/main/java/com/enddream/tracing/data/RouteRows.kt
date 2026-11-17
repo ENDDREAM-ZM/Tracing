@@ -17,8 +17,7 @@ sealed interface RailRow {
         val si: String = "",
         val lat: Double = 0.0,
         val lng: Double = 0.0,
-        val door: String = "",
-        val building: Boolean = false
+        val door: String = ""
     ) : RailRow {
         override val key: String get() = "s-$order"
     }
@@ -153,9 +152,11 @@ object MetroTimetable {
     private fun toMin(text: String): Int? {
         val t = text.trim()
         if (!t.contains(":")) return null
-        val h = t.substringBefore(":").toIntOrNull() ?: return null
-        val m = t.substringAfter(":").toIntOrNull() ?: return null
-        return h * 60 + m
+        val nextDay = t.startsWith("次日")
+        val core = t.removePrefix("次日").trim().substringBefore("*").trim()
+        val h = core.substringBefore(":").toIntOrNull() ?: return null
+        val m = core.substringAfter(":").toIntOrNull() ?: return null
+        return h * 60 + m + if (nextDay) 24 * 60 else 0
     }
 
     private fun fmt(min: Int): String {
@@ -217,11 +218,13 @@ object MetroTimetable {
     }
 
     fun firstLastOf(times: List<MetroTime>): Pair<String, String>? {
-        val firsts = times.mapNotNull { toMin(it.first) }
-        val lasts = times.mapNotNull { toMin(it.last) }
+        val firsts = times.mapNotNull { toMin(it.first) }.filter { it < 24 * 60 }
+        val lasts = times.mapNotNull { toMin(it.last) }.filter { it < 24 * 60 }
         if (firsts.isEmpty() || lasts.isEmpty()) return null
         return fmt(firsts.min()) to fmt(lasts.max())
     }
+
+    fun formatClock(min: Int): String = fmt(min)
 
     fun offsetFromServer(serverMillis: Long): Long {
         if (serverMillis <= 0L) return 0L
