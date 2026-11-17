@@ -124,6 +124,7 @@ fun MetroPage(
         Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp)
+            .padding(top = LocalTopInset.current)
     ) {
         state.notice?.let { n ->
             Spacer(Modifier.height(2.dp))
@@ -298,7 +299,12 @@ fun MetroPage(
                         if (state.lines.isEmpty()) {
                             CenteredText(state.error ?: "该城市暂无地铁数据")
                         } else {
-                            LazyColumn(Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                Modifier.fillMaxSize(),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    bottom = LocalBottomInset.current
+                                )
+                            ) {
                                 itemsIndexed(state.lines, key = { i, r -> "ml-$i-${r.fullName}" }) { _, row ->
                                     val fl = vm.lineFirstLast(row)
                                     Row(
@@ -352,7 +358,12 @@ fun MetroPage(
                     if (state.cities.isEmpty()) {
                         CenteredText("暂无地铁城市")
                     } else {
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                bottom = LocalBottomInset.current
+                            )
+                        ) {
                             itemsIndexed(state.cities, key = { i, c2 -> "mc-$i-${c2.citycode}" }) { _, c ->
                                 Row(
                                     modifier = Modifier

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 class Backdrop(val layer: GraphicsLayer, val blurred: Boolean)
 
@@ -60,9 +61,13 @@ internal fun DrawScope.paintGlassBackdrop(
 @Composable
 fun BackdropHost(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val backdrop = rememberBackdrop()
+    val barBackdrop = rememberLayerBackdrop()
     val dark = LocalDark.current
     val scheme = MaterialTheme.colorScheme
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+    CompositionLocalProvider(
+        LocalBackdrop provides backdrop,
+        LocalBarBackdrop provides barBackdrop
+    ) {
         Box(
             modifier
                 .fillMaxSize()

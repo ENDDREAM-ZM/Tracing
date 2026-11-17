@@ -174,25 +174,6 @@ class BusApi {
         return runCatching { decode<DepartResponse>(raw) }.getOrNull()?.list.orEmpty()
     }
 
-    suspend fun lineNotice(cityName: String, lineName: String, direction: Int): String {
-        val payload = """[{"lineName":"$lineName","direction":$direction}]"""
-        val raw = post(
-            form(
-                "CMD" to "120",
-                "CITYNAME" to cityName,
-                "LINELIST" to payload
-            )
-        )
-        return runCatching {
-            val root = AppJson.parseToJsonElement(raw).jsonObject
-            val info = root["info"] as? JsonArray ?: return@runCatching ""
-            info.mapNotNull { e ->
-                (e as? kotlinx.serialization.json.JsonObject)
-                    ?.get("text")?.jsonPrimitive?.content
-            }.filter { it.isNotBlank() }.joinToString("\n")
-        }.getOrDefault("")
-    }
-
     suspend fun metroInfo(adcode: String, citySpell: String): String? = withContext(Dispatchers.IO) {
         val req = Request.Builder()
             .url("https://webapi.amap.com/subway/data/${adcode}_info_${citySpell}.json")

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -86,7 +87,11 @@ fun RailList(
     listState: LazyListState = rememberLazyListState(),
     onStationClick: ((RailRow.Station) -> Unit)? = null
 ) {
-    LazyColumn(modifier.fillMaxSize(), state = listState) {
+    LazyColumn(
+        modifier.fillMaxSize(),
+        state = listState,
+        contentPadding = PaddingValues(bottom = LocalBottomInset.current)
+    ) {
         items(rows.size, key = { i -> "rail-$i-${rows[i].key}" }) { i ->
             when (val r = rows[i]) {
                 is RailRow.Station -> StationLineRow(

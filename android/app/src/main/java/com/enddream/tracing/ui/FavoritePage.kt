@@ -68,7 +68,13 @@ fun FavoritePage(
                 refreshing = cards.isNotEmpty() && cards.any { it.loading },
                 onRefresh = onPullRefresh
             ) {
-                LazyColumn(Modifier.fillMaxSize()) {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = LocalTopInset.current + 8.dp,
+                        bottom = LocalBottomInset.current + 8.dp
+                    )
+                ) {
                     itemsIndexed(
                         cards,
                         key = {

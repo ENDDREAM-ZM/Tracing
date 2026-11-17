@@ -29,13 +29,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.backdrops.layerBackdrop
 
 enum class MainTab(val label: String, val icon: ImageVector) {
     BUS("公交", Icons.Filled.Place),
@@ -45,6 +54,10 @@ enum class MainTab(val label: String, val icon: ImageVector) {
     SETTINGS("设置", Icons.Filled.Settings)
 }
 
+private val TopBarHeight = 52.dp
+private val TopBarGap = 4.dp
+private val BarHeight = 62.dp
+
 @Composable
 fun MainScaffold(
     tab: MainTab,
@@ -52,26 +65,57 @@ fun MainScaffold(
     city: String,
     onPickCity: () -> Unit,
     floatBar: Boolean,
+    topSlot: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val sysTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val sysBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val backdrop = LocalBarBackdrop.current
+    val density = LocalDensity.current
+    val dark = LocalDark.current
+    val scheme = MaterialTheme.colorScheme
+
+    var barH by remember { mutableStateOf(TopBarHeight) }
+    val topInset: Dp = sysTop + TopBarGap + barH + 6.dp
+    val bottomInset: Dp = if (floatBar) BarHeight + 12.dp + sysBottom else BarHeight + sysBottom
 
     Box(Modifier.fillMaxSize()) {
-        Column(
+        val contentModifier = if (backdrop != null) {
             Modifier
                 .fillMaxSize()
-                .padding(top = sysTop)
+                .layerBackdrop(backdrop)
+        } else {
+            Modifier.fillMaxSize()
+        }
+        CompositionLocalProvider(
+            LocalTopInset provides topInset,
+            LocalBottomInset provides bottomInset
         ) {
-            GlassCapsule(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            Box(contentModifier) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .drawBehind { paintBackdrop(dark, scheme) }
+                )
+                content()
+            }
+        }
+
+        GlassBar(
+            modifier = Modifier
+                .padding(top = sysTop + TopBarGap)
+                .padding(horizontal = 12.dp)
+                .fillMaxWidth()
+        ) {
+            Column(
+                Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .onSizeChanged { barH = with(density) { it.height.toDp() } }
             ) {
                 Row(
                     Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .height(TopBarHeight)
                         .padding(horizontal = 18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -107,38 +151,35 @@ fun MainScaffold(
                         )
                     }
                 }
-            }
-
-            Box(Modifier.weight(1f)) { content() }
-
-            if (floatBar) {
-                Spacer(Modifier.height(82.dp + sysBottom))
-            } else {
-                BottomBarInner(tab, onTabChange)
+                if (topSlot != null) {
+                    Box(Modifier.fillMaxWidth()) { topSlot() }
+                }
             }
         }
 
-        if (floatBar) GlassCapsule(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(start = 14.dp, end = 14.dp, bottom = sysBottom + 12.dp)
-                .fillMaxWidth()
-                .height(62.dp)
-        ) {
-            Row(
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
+        if (floatBar) {
+            GlassBar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 14.dp, end = 14.dp, bottom = sysBottom + 12.dp)
+                    .fillMaxWidth()
+                    .height(BarHeight)
             ) {
-                MainTab.entries.forEach { item ->
-                    TabItem(
-                        item = item,
-                        selected = item == tab,
-                        onClick = { onTabChange(item) },
-                        modifier = Modifier.weight(1f)
-                    )
+                BarTabs(tab, onTabChange)
+            }
+        } else {
+            GlassBar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(BarHeight + sysBottom),
+                shape = RoundedCornerShape(0.dp),
+                shadow = false
+            ) {
+                Column(Modifier.fillMaxSize().padding(bottom = sysBottom)) {
+                    Box(Modifier.fillMaxWidth().height(BarHeight)) {
+                        BarTabs(tab, onTabChange)
+                    }
                 }
             }
         }
@@ -146,29 +187,21 @@ fun MainScaffold(
 }
 
 @Composable
-private fun BottomBarInner(tab: MainTab, onTabChange: (MainTab) -> Unit) {
-    val sysBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    GlassPanel(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(62.dp + sysBottom)
+private fun BarTabs(tab: MainTab, onTabChange: (MainTab) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(62.dp)
-                .padding(horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            MainTab.entries.forEach { item ->
-                TabItem(
-                    item = item,
-                    selected = item == tab,
-                    onClick = { onTabChange(item) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        MainTab.entries.forEach { item ->
+            TabItem(
+                item = item,
+                selected = item == tab,
+                onClick = { onTabChange(item) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

@@ -113,26 +113,9 @@ object MetroParser {
 
 object MetroText {
 
-    private val fareOnly = Regex("^全网?分段.*元。?$")
     private val tableRow = Regex("^(.+?)[：:]【([^】]+)】｛([^｝]+)｝")
     private val direction = Regex("[【｛]往([^：:，】｝]+)[：:]")
     private val clockText = Regex("^\\d{1,2}:\\d{2}$")
-
-    fun announcement(raw: String): String {
-        val text = raw.replace("\r", "").trim()
-        if (text.isBlank()) return ""
-        val kept = ArrayList<String>()
-        for (line in text.split("\n")) {
-            val t = line.trim()
-            if (t.contains("各站首末班") || t.contains("普通列车") || t.contains("时刻表")) break
-            if (t.startsWith("★")) continue
-            if (tableRow.containsMatchIn(t)) break
-            if (fareOnly.matches(t)) continue
-            if (t.endsWith("如下：") || t.endsWith("如下:")) continue
-            kept.add(line)
-        }
-        return dedupe(kept.joinToString("\n").trim())
-    }
 
     private val statusLine = listOf("不在运营时间内", "运营时间外", "已停运", "非运营时间")
 

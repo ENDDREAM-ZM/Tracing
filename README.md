@@ -39,13 +39,14 @@ gradle :app:assembleRelease
 
 数据来源：
 
-- 掌上公交 ：公交线路、站点、实时车辆、发车时刻表，地铁各站首末班与运营公告
-- 高德地图 ：地铁线网、换乘线路、全程里程与票价
+- 掌上公交 ：公交线路、站点、实时车辆、发车时刻表，地铁各站首末班
+- 高德地图 ：地铁线网、换乘线路、全程里程、票价与运营公告
 
 开源库：
 
 - [Jetpack Compose](https://developer.android.com/jetpack/compose)
 - [Kotlin](https://kotlinlang.org)
+- [Backdrop](https://github.com/Kyant0/AndroidLiquidGlass)
 - [OkHttp](https://square.github.io/okhttp)
 - [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)
 

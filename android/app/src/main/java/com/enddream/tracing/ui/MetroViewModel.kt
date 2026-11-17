@@ -293,24 +293,6 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                     )
                 }.getOrDefault("")
             }
-            if (text.isBlank()) {
-                val names = listOf("地铁${line.name}", line.name).distinct()
-                for (n in names) {
-                    val d = runCatching { api.routeDetail(cityName(), n, direction) }.getOrNull()
-                    val ann = MetroText.announcement(d?.commonts.orEmpty())
-                    if (ann.isNotBlank()) {
-                        text = ann
-                        break
-                    }
-                }
-                if (text.isBlank()) {
-                    for (n in names) {
-                        text = runCatching { api.lineNotice(cityName(), n, direction) }
-                            .getOrDefault("")
-                        if (text.isNotBlank()) break
-                    }
-                }
-            }
             _state.value = _state.value.copy(
                 noticeText = MetroText.dedupe(
                     MetroText.clean(text),

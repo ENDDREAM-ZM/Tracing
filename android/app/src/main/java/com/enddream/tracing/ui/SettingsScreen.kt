@@ -63,6 +63,7 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp)
     ) {
+        Spacer(Modifier.height(LocalTopInset.current))
         Group("外观") {
             LabeledRowSeg("主题") {
                 SegRow(
@@ -167,7 +168,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    "打开",
+                    "前往",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted
                 )
@@ -207,7 +208,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(120.dp))
+        Spacer(Modifier.height(LocalBottomInset.current + 40.dp))
     }
 
     if (showSources) {
@@ -223,6 +224,7 @@ fun SettingsScreen(
                         "公交数据" to "掌上公交 h5.mygolbs.com",
                         "地铁线网" to "高德地图 webapi.amap.com",
                         "地铁首末班" to "高德地图 subway/data",
+                        "地铁公告" to "高德地图 subway/busExt",
                         "地铁城市表" to "掌上公交 metro.mygolbs.com",
                         "定位" to "Android 系统定位服务",
                         "导航" to "已安装的地图应用"
@@ -257,7 +259,7 @@ fun SettingsScreen(
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     ThanksItem("掌上公交", "公交线路、站点与实时车辆数据", "https://h5.mygolbs.com")
-                    ThanksItem("高德地图", "地铁线网、首末班数据", "https://webapi.amap.com")
+                    ThanksItem("高德地图", "地铁线网、首末班与公告", "https://webapi.amap.com")
                     ThanksItem("Jetpack Compose", "Android 界面框架", "https://developer.android.com/jetpack/compose")
                     ThanksItem("Kotlin", "开发语言", "https://kotlinlang.org")
                     ThanksItem("OkHttp", "网络请求", "https://square.github.io/okhttp")

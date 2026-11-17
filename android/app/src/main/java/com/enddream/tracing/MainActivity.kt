@@ -318,6 +318,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
 
     when (val s = screen) {
         Screen.Main -> {
+            val busStateForBar by busVm.state.collectAsStateWithLifecycle()
             MainScaffold(
                 tab = tab,
                 onTabChange = {
@@ -326,7 +327,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                 },
                 city = city,
                 onPickCity = { entered = false },
-                floatBar = floatBar
+                floatBar = floatBar,
+                topSlot = if (tab == MainTab.BUS) {
+                    { com.enddream.tracing.ui.BusSearchBar(busStateForBar) { busVm.onKeywordChange(it) } }
+                } else null
             ) {
                 when (tab) {
                     MainTab.BUS -> {

@@ -46,23 +46,6 @@ fun BusPage(
     val otherWidth = remember(state.lines) { lineColWidthOf(state.lines.map { it.lineName }) }
 
     Column(modifier.fillMaxSize()) {
-        GlassPill(
-            modifier = Modifier
-                .padding(horizontal = 14.dp)
-                .fillMaxWidth()
-                .height(46.dp)
-        ) {
-            SearchField(
-                value = state.keyword,
-                onValueChange = onKeyword,
-                onSearch = {},
-                placeholder = if (state.lines.isEmpty()) "搜索线路" else "${state.lines.size} 条线路",
-                modifier = Modifier.align(Alignment.CenterStart)
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
         Box(
             Modifier
                 .weight(1f)
@@ -86,7 +69,13 @@ fun BusPage(
                             Text("没有找到线路", color = TextMuted)
                         }
                     } else {
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                top = LocalTopInset.current + 6.dp,
+                                bottom = LocalBottomInset.current + 8.dp
+                            )
+                        ) {
                             item { LineTableHeader(lineColWidth = searchWidth) }
                             itemsIndexed(
                                 state.lines,
@@ -109,7 +98,13 @@ fun BusPage(
                 }
 
                 else -> PullRefresh(refreshing = state.refreshing, onRefresh = onPullRefresh) {
-                    LazyColumn(Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            top = LocalTopInset.current + 6.dp,
+                            bottom = LocalBottomInset.current + 8.dp
+                        )
+                    ) {
                         item { SectionHeader("附近站点", state.loadingNearby, "定位", onLocate) }
                         if (state.nearbyDetail.isEmpty()) {
                             item {
@@ -197,7 +192,6 @@ fun BusPage(
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -266,5 +260,26 @@ private fun OtherLineCard(
             .background(bg)
     ) {
         content()
+    }
+}
+
+@Composable
+fun BusSearchBar(
+    state: BusUiState,
+    onKeyword: (String) -> Unit
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 2.dp)
+            .height(44.dp)
+    ) {
+        SearchField(
+            value = state.keyword,
+            onValueChange = onKeyword,
+            onSearch = {},
+            placeholder = if (state.lines.isEmpty()) "搜索线路" else "${state.lines.size} 条线路",
+            modifier = Modifier.align(Alignment.CenterStart)
+        )
     }
 }

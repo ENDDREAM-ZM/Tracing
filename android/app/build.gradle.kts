@@ -20,8 +20,8 @@ android {
         applicationId = "com.enddream.tracing"
         minSdk = 28
         targetSdk = 36
-        versionCode = 306
-        versionName = "1.3.6"
+        versionCode = 307
+        versionName = "1.3.7"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -77,7 +77,7 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2026.01.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.02.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
@@ -90,4 +90,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.github.kyant0:backdrop:1.0.6")
 }

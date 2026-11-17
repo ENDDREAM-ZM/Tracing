@@ -43,6 +43,7 @@ fun NavPage(
         modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp)
+            .padding(top = LocalTopInset.current)
     ) {
         GlassPanel(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(16.dp)) {
@@ -100,7 +101,12 @@ fun NavPage(
                     )
                 }
             } else {
-                androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        bottom = LocalBottomInset.current
+                    )
+                ) {
                     if (nearby.isNotEmpty()) {
                         item {
                             Text(
