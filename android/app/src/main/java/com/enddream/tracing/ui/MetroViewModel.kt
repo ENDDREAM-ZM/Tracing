@@ -346,12 +346,6 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         return _state.value.firstLastFallback[line.fullName] ?: MetroTimetable.firstLastOf(all)
     }
 
-    private fun ownTimesOf(line: MetroLineRow, st: MetroStationRow): List<MetroTime> {
-        val own = ownLineIds(line)
-        return _state.value.times[st.si].orEmpty()
-            .filter { it.lineId.isEmpty() || own.isEmpty() || it.lineId in own }
-    }
-
     private suspend fun fillMissing(
         lines: List<MetroLineRow>,
         times: Map<String, List<MetroTime>>
@@ -387,31 +381,27 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                 }
                 continue
             }
-            val tail = stationOf(line, table.directions.firstOrNull().orEmpty())
-            val head = stationOf(line, table.directions.getOrNull(1).orEmpty())
+            val toward1 = stationOf(line, table.directions.firstOrNull().orEmpty())
+            val toward2 = stationOf(line, table.directions.getOrNull(1).orEmpty())
             val firsts = ArrayList<String>()
             val lasts = ArrayList<String>()
             for (row in table.rows) {
                 val st = stationOf(line, row.name) ?: continue
                 val add = ArrayList<MetroTime>(2)
-                val atTail = tail != null && st.si == tail.si
-                val atHead = head != null && st.si == head.si
-                if (!atTail && row.firstToward.first.isNotBlank() && row.firstToward.second.isNotBlank()) {
-                    add.add(MetroTime(lid, row.firstToward.first, row.firstToward.second, tail?.si.orEmpty()))
-                }
-                if (!atHead && row.secondToward.first.isNotBlank() && row.secondToward.second.isNotBlank()) {
-                    add.add(MetroTime(lid, row.secondToward.first, row.secondToward.second, head?.si.orEmpty()))
-                }
-                if (add.isEmpty()) continue
-                merged[st.si] = merged[st.si].orEmpty().filter { it.lineId.isNotEmpty() && it.lineId !in own } + add
-                if (!atTail) {
+                val at1 = toward1 != null && st.si == toward1.si
+                val at2 = toward2 != null && st.si == toward2.si
+                if (!at1 && row.firstToward.first.isNotBlank() && row.firstToward.second.isNotBlank()) {
+                    add.add(MetroTime(lid, row.firstToward.first, row.firstToward.second, toward1?.si.orEmpty()))
                     firsts.add(row.firstToward.first)
                     lasts.add(row.firstToward.second)
                 }
-                if (!atHead) {
+                if (!at2 && row.secondToward.first.isNotBlank() && row.secondToward.second.isNotBlank()) {
+                    add.add(MetroTime(lid, row.secondToward.first, row.secondToward.second, toward2?.si.orEmpty()))
                     firsts.add(row.secondToward.first)
                     lasts.add(row.secondToward.second)
                 }
+                if (add.isEmpty()) continue
+                merged[st.si] = merged[st.si].orEmpty().filter { it.lineId.isNotEmpty() && it.lineId !in own } + add
             }
             val first = firsts.mapNotNull { MetroTimetable.parseClock(it) }.filter { it < 24 * 60 }.minOrNull()
             val last = lasts.mapNotNull { MetroTimetable.parseClock(it) }.filter { it < 24 * 60 }.maxOrNull()
