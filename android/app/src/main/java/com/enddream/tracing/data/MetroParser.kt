@@ -134,23 +134,31 @@ object MetroText {
         return dedupe(kept.joinToString("\n").trim())
     }
 
-    fun dedupe(raw: String): String {
+    private val statusLine = listOf("不在运营时间内", "运营时间外", "已停运", "非运营时间")
+
+    fun clean(raw: String): String = raw.replace("\r", "")
+        .split("\n")
+        .map { it.trim() }
+        .filter { it.isNotBlank() && statusLine.none { s -> it.startsWith(s) } }
+        .joinToString("\n")
+
+    fun dedupe(raw: String, names: List<String> = emptyList()): String {
         val lines = raw.replace("\r", "").split("\n").map { it.trim() }.filter { it.isNotBlank() }
         if (lines.size < 2) return lines.firstOrNull().orEmpty()
         val out = ArrayList<String>()
         for (line in lines) {
-            val k = key(line)
+            val k = key(line, names)
             if (k.isEmpty()) {
                 out.add(line)
                 continue
             }
-            val same = out.indexOfFirst { key(it) == k }
+            val same = out.indexOfFirst { key(it, names) == k }
             if (same >= 0) {
                 if (line.length > out[same].length) out[same] = line
                 continue
             }
             val inner = out.indexOfFirst {
-                val a = key(it)
+                val a = key(it, names)
                 a.isNotEmpty() && (a.contains(k) || k.contains(a))
             }
             if (inner < 0) out.add(line) else if (line.length > out[inner].length) out[inner] = line
@@ -158,8 +166,10 @@ object MetroText {
         return out.joinToString("\n")
     }
 
-    private fun key(text: String): String {
-        val t = text
+    private fun key(text: String, names: List<String> = emptyList()): String {
+        var t = text
+        names.filter { it.isNotBlank() }.sortedByDescending { it.length }.forEach { t = t.replace(it, "") }
+        t = t
             .replace(Regex("地铁[0-9A-Za-z一二三四五六七八九十]+号线"), "")
             .replace(Regex("[0-9A-Za-z一二三四五六七八九十]+号线"), "")
             .replace("地铁", "")
