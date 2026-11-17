@@ -55,6 +55,7 @@ import com.enddream.tracing.data.api.MetroCity
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun MetroPage(
     city: String,
@@ -156,7 +157,6 @@ fun MetroPage(
                     SubHeader(
                         title = line.fullName,
                         subtitle = "往 ${if (state.reverse) line.stations.firstOrNull()?.name else line.stations.lastOrNull()?.name} 方向",
-                        firstLast = fl,
                         reverse = state.reverse,
                         onReverse = { vm.toggleDirection() },
                         onTimetable = { showTimetable = true },
@@ -187,31 +187,50 @@ fun MetroPage(
                             }
                         }
                     ) { vm.backToLines() }
-                    val meta = buildString {
-                        if (state.lineLength > 0) {
-                            append("全程 ")
-                            append(String.format("%.1f", state.lineLength / 1000.0))
-                            append(" 公里")
+                    val lengthText = if (state.lineLength > 0) {
+                        "全程 " + String.format("%.1f", state.lineLength / 1000.0) + " 公里"
+                    } else ""
+                    val priceText = if (state.linePrice > 0.0) {
+                        "票价 " + if (state.linePriceMin > 0.0 && state.linePriceMin < state.linePrice)
+                            "${fmtYuan(state.linePriceMin)}-${fmtYuan(state.linePrice)} 元"
+                        else "${fmtYuan(state.linePrice)} 元"
+                    } else ""
+                    if (lengthText.isNotBlank() || priceText.isNotBlank() || fl != null) {
+                        Spacer(Modifier.height(2.dp))
+                        androidx.compose.foundation.layout.FlowRow(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (lengthText.isNotBlank()) {
+                                Text(
+                                    lengthText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                            if (priceText.isNotBlank()) {
+                                Text(
+                                    priceText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                            if (fl != null) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    TimeBadge(true, fl.first, 10)
+                                    TimeBadge(false, fl.second, 10)
+                                }
+                            }
                         }
-                        val hi = state.linePrice
-                        val lo = state.linePriceMin
-                        if (hi > 0.0) {
-                            if (isNotBlank()) append("     ")
-                            append("票价 ")
-                            append(
-                                if (lo > 0.0 && lo < hi) "${fmtYuan(lo)}-${fmtYuan(hi)} 元"
-                                else "${fmtYuan(hi)} 元"
-                            )
-                        }
-                    }
-                    if (meta.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            meta,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(horizontal = 2.dp)
-                        )
                     }
                     state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
                         Spacer(Modifier.height(8.dp))
@@ -269,7 +288,6 @@ fun MetroPage(
                     SubHeader(
                         title = mc.cityname,
                         subtitle = "${state.lines.size} 条线路",
-                        firstLast = null,
                         reverse = false,
                         onReverse = null,
                         onTimetable = null,
@@ -408,7 +426,7 @@ fun MetroPage(
             text = {
                 Column {
                     Text(
-                        if (st.building) "此站点建设中，暂不可乘坐" else "是否导航到「${st.name}」站？",
+                        "是否导航到「${st.name}」站？",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
@@ -573,7 +591,6 @@ private fun CenteredText(text: String) {
 private fun SubHeader(
     title: String,
     subtitle: String,
-    firstLast: Pair<String, String>?,
     reverse: Boolean,
     onReverse: (() -> Unit)?,
     onTimetable: (() -> Unit)?,
@@ -581,92 +598,56 @@ private fun SubHeader(
     onFav: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回",
-                modifier = Modifier.size(20.dp),
-                tint = TextPrimary
-            )
-        }
-        Column(Modifier.weight(1f)) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    modifier = Modifier.size(20.dp),
+                    tint = TextPrimary
+                )
+            }
             Text(
                 displayMetroLine(title),
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        if (firstLast != null) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                AlignedTime(true, firstLast.first)
-                AlignedTime(false, firstLast.second)
+            if (onFav != null) {
+                FavButton(fav = isFav, showLabel = true, onClick = onFav)
+                Spacer(Modifier.width(2.dp))
             }
-            Spacer(Modifier.width(8.dp))
-        }
-        if (onFav != null) {
-            FavButton(fav = isFav, showLabel = true, onClick = onFav)
-            Spacer(Modifier.width(2.dp))
-        }
-        if (onTimetable != null || onReverse != null) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (onReverse != null) {
-                    Pill(if (reverse) "正向" else "换向", onReverse)
-                }
-                if (onTimetable != null) {
-                    Pill("时刻表", onTimetable)
+            if (onTimetable != null || onReverse != null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (onReverse != null) {
+                        Pill(if (reverse) "正向" else "换向", onReverse)
+                    }
+                    if (onTimetable != null) {
+                        Pill("时刻表", onTimetable)
+                    }
                 }
             }
         }
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+            modifier = Modifier.padding(start = 50.dp, end = 4.dp)
+        )
     }
 }
 
 internal fun displayMetroLine(name: String): String =
     name.trim().removePrefix("地铁")
-
-@Composable
-private fun AlignedTime(first: Boolean, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .width(16.dp)
-                .background(if (first) FirstColor else LastColor, RoundedCornerShape(4.dp))
-                .padding(vertical = 1.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                if (first) "首" else "末",
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                color = Color.White
-            )
-        }
-        Spacer(Modifier.width(4.dp))
-        Text(
-            value,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
-            color = TextMuted,
-            modifier = Modifier.width(40.dp)
-        )
-    }
-}
 
 @Composable
 private fun Pill(text: String, onClick: () -> Unit) {
