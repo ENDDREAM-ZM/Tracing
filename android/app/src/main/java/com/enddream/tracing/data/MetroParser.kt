@@ -14,8 +14,7 @@ data class MetroStationRow(
     val si: String = "",
     val transferIds: List<String> = emptyList(),
     val door: String = "",
-    val poiid: String = "",
-    val building: Boolean = false
+    val poiid: String = ""
 )
 
 data class MetroTime(
@@ -60,8 +59,8 @@ object MetroParser {
                     ?: st["dr"]?.jsonPrimitive?.content
                     ?: ""
                 val poiid = st["poiid"]?.jsonPrimitive?.content.orEmpty()
-                val building = st["su"]?.jsonPrimitive?.content == "3"
-                MetroStationRow(n, lng, lat, si, ids, door, poiid, building)
+                if (st["su"]?.jsonPrimitive?.content == "3") null
+                else MetroStationRow(n, lng, lat, si, ids, door, poiid)
             } ?: emptyList()
             MetroLineRow(name, fullName, color, stations, loop)
         }
@@ -115,6 +114,9 @@ object MetroParser {
 object MetroText {
 
     private val fareOnly = Regex("^全网?分段.*元。?$")
+    private val tableRow = Regex("^(.+?)[：:]【([^】]+)】｛([^｝]+)｝")
+    private val direction = Regex("[【｛]往([^：:，】｝]+)[：:]")
+    private val clockText = Regex("^\\d{1,2}:\\d{2}$")
 
     fun announcement(raw: String): String {
         val text = raw.replace("\r", "").trim()
@@ -122,11 +124,86 @@ object MetroText {
         val kept = ArrayList<String>()
         for (line in text.split("\n")) {
             val t = line.trim()
-            if (t.startsWith("各站首末班") || t.startsWith("普通列车")) break
+            if (t.contains("各站首末班") || t.contains("普通列车") || t.contains("时刻表")) break
+            if (t.startsWith("★")) continue
+            if (tableRow.containsMatchIn(t)) break
             if (fareOnly.matches(t)) continue
             if (t.endsWith("如下：") || t.endsWith("如下:")) continue
             kept.add(line)
         }
-        return kept.joinToString("\n").trim()
+        return dedupe(kept.joinToString("\n").trim())
+    }
+
+    fun dedupe(raw: String): String {
+        val lines = raw.replace("\r", "").split("\n").map { it.trim() }.filter { it.isNotBlank() }
+        if (lines.size < 2) return lines.firstOrNull().orEmpty()
+        val out = ArrayList<String>()
+        for (line in lines) {
+            val k = key(line)
+            if (k.isEmpty()) {
+                out.add(line)
+                continue
+            }
+            val same = out.indexOfFirst { key(it) == k }
+            if (same >= 0) {
+                if (line.length > out[same].length) out[same] = line
+                continue
+            }
+            val inner = out.indexOfFirst {
+                val a = key(it)
+                a.isNotEmpty() && (a.contains(k) || k.contains(a))
+            }
+            if (inner < 0) out.add(line) else if (line.length > out[inner].length) out[inner] = line
+        }
+        return out.joinToString("\n")
+    }
+
+    private fun key(text: String): String {
+        val t = text
+            .replace(Regex("地铁[0-9A-Za-z一二三四五六七八九十]+号线"), "")
+            .replace(Regex("[0-9A-Za-z一二三四五六七八九十]+号线"), "")
+            .replace("地铁", "")
+        return t.filter { it.isLetterOrDigit() }
+    }
+
+    private fun clock(raw: String): String {
+        val t = raw.trim().removeSuffix("*").trim()
+        if (clockText.matches(t)) return t
+        val core = t.removePrefix("次日").trim()
+        return if (t.startsWith("次日") && clockText.matches(core)) "次日$core" else ""
+    }
+
+    data class TableRow(
+        val name: String,
+        val firstToward: Pair<String, String>,
+        val secondToward: Pair<String, String>
+    )
+
+    data class StationTable(
+        val directions: List<String>,
+        val rows: List<TableRow>
+    )
+
+    fun stationTable(raw: String): StationTable? {
+        val text = raw.replace("\r", "")
+        val dirs = direction.findAll(text).map { it.groupValues[1].trim() }.take(2).toList()
+        if (dirs.size < 2) return null
+        val rows = ArrayList<TableRow>()
+        for (line in text.split("\n")) {
+            val m = tableRow.find(line.trim()) ?: continue
+            val a = m.groupValues[2].split("，")
+            val b = m.groupValues[3].split("，")
+            if (a.size < 2 || b.size < 2) continue
+            val name = m.groupValues[1].trim()
+            if (name.isBlank()) continue
+            rows.add(
+                TableRow(
+                    name,
+                    clock(a[0]) to clock(a[1]),
+                    clock(b[0]) to clock(b[1])
+                )
+            )
+        }
+        return if (rows.isEmpty()) null else StationTable(dirs, rows)
     }
 }
