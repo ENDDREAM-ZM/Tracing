@@ -611,14 +611,20 @@ private fun SubHeader(
                     tint = TextPrimary
                 )
             }
-            Text(
-                displayMetroLine(title),
-                style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    displayMetroLine(title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+            }
             if (onFav != null) {
                 FavButton(fav = isFav, showLabel = true, onClick = onFav)
                 Spacer(Modifier.width(2.dp))
@@ -637,12 +643,6 @@ private fun SubHeader(
                 }
             }
         }
-        Text(
-            subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted,
-            modifier = Modifier.padding(start = 50.dp, end = 4.dp)
-        )
     }
 }
 
