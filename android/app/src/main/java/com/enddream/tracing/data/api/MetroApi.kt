@@ -72,7 +72,7 @@ class MetroApi {
                     bus["risk_time_des"]?.jsonPrimitive?.contentOrNull,
                     bus["time_tag_des"]?.jsonPrimitive?.contentOrNull
                 ).map { it.trim() }.filter { it.isNotBlank() }
-                MetroText.dedupe(parts.joinToString("\n"))
+                MetroText.dedupe(MetroText.clean(parts.joinToString("\n")))
             }
         }.getOrDefault("")
     }
