@@ -159,6 +159,21 @@ class BusApi {
 
     suspend fun metroSpellMap(): Map<String, String> = MetroApi().spellMap()
 
+
+    suspend fun depart(cityName: String, routeId: Int, direction: Int): List<DepartGroup> {
+        if (routeId <= 0) return emptyList()
+        val raw = post(
+            form(
+                "CMD" to "207",
+                "CITYNAME" to cityName,
+                "DIRECTION" to direction.toString(),
+                "ROUTEID" to routeId.toString(),
+                "CITYKEY" to ""
+            )
+        )
+        return runCatching { decode<DepartResponse>(raw) }.getOrNull()?.list.orEmpty()
+    }
+
     suspend fun lineNotice(cityName: String, lineName: String, direction: Int): String {
         val payload = """[{"lineName":"$lineName","direction":$direction}]"""
         val raw = post(

@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,6 +104,12 @@ fun MetroPage(
         }
         if (soon) {
             alerted = true
+            alertStation = null
+            com.enddream.tracing.data.AlertStore.set(
+                line.fullName,
+                if (state.reverse) 2 else 1,
+                null
+            )
             Notify.fire(
                 ctx,
                 ("metro|${line.fullName}|$target").hashCode(),
@@ -121,7 +128,6 @@ fun MetroPage(
             Spacer(Modifier.height(2.dp))
             NoticeBanner(
                 notice = n,
-                onPick = { vm.showCityList() },
                 onDismiss = { forever ->
                     vm.dismissNotice(forever)
                     if (forever) scope.launch { Prefs.setMetroNoticeOff(ctx, true) }
@@ -181,28 +187,35 @@ fun MetroPage(
                             }
                         }
                     ) { vm.backToLines() }
-                    state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
-                        Spacer(Modifier.height(6.dp))
-                        GlassPanel(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 0.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                                Text(
-                                    "运营公告",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(3.dp))
-                                Text(
-                                    txt,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
-                                )
-                            }
+                    val meta = buildString {
+                        if (state.lineLength > 0) {
+                            append("全程 ")
+                            append(String.format("%.1f", state.lineLength / 1000.0))
+                            append(" 公里")
                         }
+                        val hi = state.linePrice
+                        val lo = state.linePriceMin
+                        if (hi > 0.0) {
+                            if (isNotBlank()) append("     ")
+                            append("票价 ")
+                            append(
+                                if (lo > 0.0 && lo < hi) "${fmtYuan(lo)}-${fmtYuan(hi)} 元"
+                                else "${fmtYuan(hi)} 元"
+                            )
+                        }
+                    }
+                    if (meta.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            meta,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                    }
+                    state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
+                        Spacer(Modifier.height(8.dp))
+                        NoticeCard(txt)
                     }
                     Spacer(Modifier.height(8.dp))
                     GlassPanel(modifier = Modifier.weight(1f)) {
@@ -224,7 +237,7 @@ fun MetroPage(
                         }
                         PullRefresh(
                             refreshing = state.loading,
-                            onRefresh = { vm.reload() }
+                            onRefresh = { vm.reloadDetail() }
                         ) {
                         RailList(
                             rows = rows,
@@ -354,9 +367,7 @@ fun MetroPage(
             MetroTimetableScreen(
                 line = line,
                 times = state.times,
-                siNames = state.lines.flatMap { it.stations }
-                    .associate { it.si to it.name },
-                selfLineIds = lineIdsOf(state.lineIdMap, line),
+                official = state.official,
                 minuteOfDay = state.minuteOfDay,
                 initialReverse = state.reverse,
                 onBack = { showTimetable = false }
@@ -449,7 +460,6 @@ private fun clockToMin(text: String): Int {
 @Composable
 private fun NoticeBanner(
     notice: MetroNotice,
-    onPick: () -> Unit,
     onDismiss: (Boolean) -> Unit
 ) {
     var askClose by remember { mutableStateOf(false) }
@@ -515,14 +525,6 @@ private fun NoticeBanner(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                "换城市",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable(onClick = onPick)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            )
             Text(
                 "关闭",
                 style = MaterialTheme.typography.labelMedium,
@@ -677,3 +679,58 @@ private fun Pill(text: String, onClick: () -> Unit) {
 private fun String.toComposeColor(): Color = runCatching {
     if (isBlank()) Color(0xFF4FD6C0) else Color(("FF" + this).toLong(16))
 }.getOrDefault(Color(0xFF4FD6C0))
+
+private fun fmtYuan(v: Double): String =
+    if (kotlin.math.abs(v - v.toInt()) < 0.05) v.toInt().toString() else String.format("%.1f", v)
+
+@Composable
+private fun NoticeCard(text: String) {
+    var expanded by remember(text) { mutableStateOf(false) }
+    val accent = Color(0xFFE5484D)
+    val dark = LocalDark.current
+    val bg = if (dark) accent.copy(alpha = 0.16f) else accent.copy(alpha = 0.08f)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                Modifier
+                    .padding(top = 4.dp)
+                    .size(13.dp)
+                    .background(accent, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "!",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    color = Color.White
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (dark) Color(0xFFF2C7C7) else Color(0xFF8C2F33),
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (text.length > 40) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (expanded) "收起" else "更多",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = accent,
+                    modifier = Modifier
+                        .clickable { expanded = !expanded }
+                        .padding(vertical = 2.dp)
+                )
+            }
+        }
+    }
+}

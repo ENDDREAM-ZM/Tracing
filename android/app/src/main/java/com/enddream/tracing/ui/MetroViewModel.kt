@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.enddream.tracing.data.MetroLineRow
 import com.enddream.tracing.data.MetroParser
+import com.enddream.tracing.data.MetroText
 import com.enddream.tracing.data.MetroTime
 import com.enddream.tracing.data.MetroTimetable
 import com.enddream.tracing.data.NetTime
 import com.enddream.tracing.data.api.BusApi
+import com.enddream.tracing.data.api.MetroApi
 import com.enddream.tracing.data.api.MetroCity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +35,12 @@ data class MetroUiState(
     val times: Map<String, List<MetroTime>> = emptyMap(),
     val lineIdMap: Map<String, String> = emptyMap(),
     val reverse: Boolean = false,
-    val noticeText: String? = null
+    val noticeText: String? = null,
+    val lineLength: Int = 0,
+    val linePrice: Double = 0.0,
+    val linePriceMin: Double = 0.0,
+    val noticeLoading: Boolean = false,
+    val official: List<com.enddream.tracing.data.MetroText.Official> = emptyList()
 )
 
 class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
@@ -129,7 +136,11 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                 notice = null,
                 times = emptyMap(),
                 lineIdMap = emptyMap(),
-                reverse = false
+                reverse = false,
+                lineLength = 0,
+                linePrice = 0.0,
+                linePriceMin = 0.0,
+                noticeText = null
             )
             val spell = spellMap[city.adcode].orEmpty()
             if (spell.isBlank()) {
@@ -160,6 +171,39 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
         selectCity(mc)
     }
 
+    fun reloadDetail() {
+        val mc = _state.value.city ?: return
+        val cur = _state.value.selectedLine ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(loading = true, error = null)
+            val spell = spellMap[mc.adcode].orEmpty()
+            if (spell.isBlank()) {
+                _state.value = _state.value.copy(loading = false)
+                return@launch
+            }
+            val raw = api.metroNetwork(mc.adcode, spell)
+            if (raw.isNullOrBlank()) {
+                _state.value = _state.value.copy(loading = false)
+                return@launch
+            }
+            val lines = MetroParser.parse(raw)
+            val idMap = MetroParser.lineIdMap(raw)
+            val infoRaw = api.metroInfo(mc.adcode, spell)
+            val times = if (infoRaw.isNullOrBlank()) emptyMap() else MetroParser.parseTimes(infoRaw)
+            val again = lines.firstOrNull { it.fullName == cur.fullName } ?: cur
+            _state.value = _state.value.copy(
+                loading = false,
+                lines = lines,
+                lineIdMap = idMap,
+                times = times,
+                selectedLine = again
+            )
+            loadLineExt(again)
+            loadNotice(again.name, if (_state.value.reverse) 2 else 1)
+            loadOfficial(again)
+        }
+    }
+
     fun refresh() {
         val mc = _state.value.city
         if (mc != null && _state.value.lines.isEmpty()) selectCity(mc)
@@ -168,12 +212,29 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     fun selectLineByName(name: String, reverse: Boolean) {
         val line = _state.value.lines.firstOrNull { it.fullName == name || it.name == name }
         if (line != null) {
-            _state.value = _state.value.copy(selectedLine = line, reverse = reverse)
+            _state.value = _state.value.copy(
+                selectedLine = line,
+                reverse = reverse,
+                lineLength = 0,
+                linePrice = 0.0,
+                noticeText = null
+            )
+            loadLineExt(line)
         }
     }
 
     fun selectLine(line: MetroLineRow) {
-        _state.value = _state.value.copy(selectedLine = line, reverse = false)
+        _state.value = _state.value.copy(
+            selectedLine = line,
+            reverse = false,
+            lineLength = 0,
+            linePrice = 0.0,
+            linePriceMin = 0.0,
+            noticeText = null,
+            official = emptyList()
+        )
+        loadLineExt(line)
+        loadOfficial(line)
     }
 
     fun toggleDirection() {
@@ -198,16 +259,95 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     fun loadNotice(lineName: String, direction: Int) {
         if (lineName.isBlank()) return
         viewModelScope.launch {
-            val text = runCatching { api.lineNotice(cityName(), lineName, direction) }
-                .getOrDefault("")
-            _state.value = _state.value.copy(noticeText = text)
+            _state.value = _state.value.copy(noticeLoading = true)
+            val names = listOf("地铁$lineName", lineName).distinct()
+            var text = ""
+            for (n in names) {
+                val d = runCatching { api.routeDetail(cityName(), n, direction) }.getOrNull()
+                val ann = MetroText.announcement(d?.commonts.orEmpty())
+                if (ann.isNotBlank()) {
+                    text = ann
+                    break
+                }
+            }
+            if (text.isBlank()) {
+                for (n in names) {
+                    text = runCatching { api.lineNotice(cityName(), n, direction) }
+                        .getOrDefault("")
+                    if (text.isNotBlank()) break
+                }
+            }
+            _state.value = _state.value.copy(noticeText = text, noticeLoading = false)
+        }
+    }
+
+    fun loadOfficial(line: MetroLineRow) {
+        viewModelScope.launch {
+            val names = listOf("地铁${line.name}", line.name).distinct()
+            var text = ""
+            for (n in names) {
+                val d = runCatching { api.routeDetail(cityName(), n, 1) }.getOrNull()
+                if (d != null && d.commonts.isNotBlank()) {
+                    text = d.commonts
+                    break
+                }
+            }
+            _state.value = _state.value.copy(official = MetroText.official(text))
+        }
+    }
+
+    fun loadLineExt(line: MetroLineRow) {
+        val head = line.stations.firstOrNull() ?: return
+        val tail = line.stations.lastOrNull() ?: return
+        val second = line.stations.getOrNull(1)
+        viewModelScope.launch {
+            val api2 = MetroApi()
+            val ext = runCatching {
+                api2.lineExt(head.lat, head.lng, head.poiid, tail.lat, tail.lng, tail.poiid)
+            }.getOrNull()
+            val minExt = if (second != null) runCatching {
+                api2.lineExt(head.lat, head.lng, head.poiid, second.lat, second.lng, second.poiid)
+            }.getOrNull() else null
+            _state.value = _state.value.copy(
+                lineLength = ext?.first ?: 0,
+                linePrice = ext?.second ?: 0.0,
+                linePriceMin = minExt?.second ?: 0.0
+            )
         }
     }
 
     private fun cityName(): String = _state.value.city?.cityname.orEmpty()
 
     fun lineFirstLast(line: MetroLineRow): Pair<String, String>? {
-        val all = line.stations.flatMap { _state.value.times[it.si].orEmpty() }
-        return MetroTimetable.firstLastOf(all)
+        val off = _state.value.official
+            .takeIf { _state.value.selectedLine?.fullName == line.fullName }
+            .orEmpty()
+        if (off.isNotEmpty()) {
+            val firsts = off.mapNotNull { clockMin(it.forwardFirst) }
+            val lasts = off.mapNotNull { clockMin(it.forwardLast) }
+            if (firsts.isNotEmpty() && lasts.isNotEmpty()) {
+                return fmtClock(firsts.min()) to fmtClock(lasts.max())
+            }
+        }
+        val own = line.stations.flatMap { st ->
+            _state.value.times[st.si].orEmpty()
+                .filter { it.lineId.isEmpty() || it.lineId in ownLineIds(line) }
+        }
+        return MetroTimetable.firstLastOf(own)
     }
+
+    private fun ownLineIds(line: MetroLineRow): Set<String> =
+        _state.value.lineIdMap.entries.filter { it.value == line.fullName }
+            .map { it.key }.toSet()
+
+    private fun clockMin(text: String): Int? {
+        val t = text.trim().removePrefix("次日")
+        if (!t.contains(":")) return null
+        val h = t.substringBefore(":").toIntOrNull() ?: return null
+        val m = t.substringAfter(":").take(2).toIntOrNull() ?: return null
+        return h * 60 + m
+    }
+
+    private fun fmtClock(min: Int): String =
+        String.format("%02d:%02d", (min / 60) % 24, min % 60)
 }

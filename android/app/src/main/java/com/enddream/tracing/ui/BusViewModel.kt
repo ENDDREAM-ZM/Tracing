@@ -42,6 +42,8 @@ data class NearbyWithLines(
 )
 
 data class BusUiState(
+    val otherCurrent: Map<String, String> = emptyMap(),
+    val otherRound: Int = 0,
     val keyword: String = "",
     val nearbyDetail: List<NearbyWithLines> = emptyList(),
     val lines: List<BusLine> = emptyList(),
@@ -94,7 +96,10 @@ class BusViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     }
 
     fun refresh() {
-        _state.value = _state.value.copy(refreshing = true)
+        _state.value = _state.value.copy(
+            refreshing = true,
+            otherRound = _state.value.otherRound + 1
+        )
         if (_state.value.keyword.isBlank()) {
             loadAll()
             if (lastLng != 0.0) loadNearby(lastLng, lastLat)
@@ -140,6 +145,48 @@ class BusViewModel(private val api: BusApi = BusApi()) : ViewModel() {
             )
             top.forEach { st -> launch { fillStation(st) } }
         }
+    }
+
+    private val otherLoading: MutableSet<String> =
+        java.util.Collections.synchronizedSet(mutableSetOf())
+    private val otherVersion = java.util.Collections.synchronizedMap(mutableMapOf<String, Int>())
+    private val otherSem = Semaphore(3)
+
+    fun loadOtherCurrent(line: String, dir: Int) {
+        val key = "$line|$dir"
+        val round = _state.value.otherRound
+        if (otherVersion[key] == round) return
+        if (otherVersion.size >= 800) return
+        if (!otherLoading.add(key)) return
+        otherVersion[key] = round
+        viewModelScope.launch {
+            try {
+                val text = otherSem.withPermit {
+                    runCatching { otherCurrentOf(line, dir) }.getOrDefault("")
+                }
+                _state.value = _state.value.copy(
+                    otherCurrent = _state.value.otherCurrent + (key to text)
+                )
+            } finally {
+                otherLoading.remove(key)
+            }
+        }
+    }
+
+    private suspend fun otherCurrentOf(line: String, dir: Int): String {
+        val res = runCatching { api.realtime(city, line, dir, 1) }.getOrNull() ?: return ""
+        val buses = res.listBuses.filter { it.index >= 0 }
+        if (buses.isEmpty()) {
+            return res.routeOnStationRTimeInfoList.firstOrNull()
+                ?.busToStationTips.orEmpty().trim().orEmpty()
+        }
+        val nearest = buses.minByOrNull { it.index } ?: return ""
+        if (nearest.stationName.isBlank()) return ""
+        if (nearest.statusType == "0") return nearest.stationName
+        val d = RouteCache.cached(city, line, dir)
+        val prev = d?.data?.getOrNull(nearest.index - 1)
+            ?.let { it.stationName.ifBlank { it.showName } }
+        return prev?.takeIf { it.isNotBlank() } ?: nearest.stationName
     }
 
     private var roundRobin: Int = 0

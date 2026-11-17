@@ -20,8 +20,8 @@ android {
         applicationId = "com.enddream.tracing"
         minSdk = 28
         targetSdk = 36
-        versionCode = 290
-        versionName = "1.2.9"
+        versionCode = 301
+        versionName = "1.3.1"
         vectorDrawables.useSupportLibrary = true
     }
 

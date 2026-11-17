@@ -359,7 +359,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                             onPullRefresh = {
                                 busVm.refresh()
                                 locateTick++
-                            }
+                            },
+                            onLoadCurrent = { ln, d -> busVm.loadOtherCurrent(ln, d) }
                         )
                     }
 

@@ -112,6 +112,8 @@ fun RouteScreen(
         if (alerted) return@LaunchedEffect
         if (target in state.arrived || target in state.upcoming) {
             alerted = true
+            alertStation = null
+            com.enddream.tracing.data.AlertStore.set(line, dir, null)
             Notify.fire(
                 ctx,
                 ("$line|$target").hashCode(),

@@ -1,5 +1,6 @@
 package com.enddream.tracing.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +18,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.enddream.tracing.data.api.BusLine
 import com.enddream.tracing.data.api.NearbyStation
@@ -33,9 +38,12 @@ fun BusPage(
     onOpenCityLine: (BusLine) -> Unit,
     onLocate: () -> Unit,
     onPullRefresh: () -> Unit,
+    onLoadCurrent: (String, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val searching = state.keyword.isNotBlank()
+    val searchWidth = remember(state.lines) { lineColWidthOf(state.lines.map { it.lineName }) }
+    val otherWidth = remember(state.lines) { lineColWidthOf(state.lines.map { it.lineName }) }
 
     Column(modifier.fillMaxSize()) {
         GlassPill(
@@ -79,7 +87,7 @@ fun BusPage(
                         }
                     } else {
                         LazyColumn(Modifier.fillMaxSize()) {
-                            item { LineTableHeader() }
+                            item { LineTableHeader(lineColWidth = searchWidth) }
                             itemsIndexed(
                                 state.lines,
                                 key = { i, l -> "line-$i-${l.lineName}-${l.upperOrDown}" }
@@ -92,6 +100,7 @@ fun BusPage(
                                     from = line.from,
                                     current = "",
                                     to = line.to,
+                                    lineColWidth = searchWidth,
                                     onOpen = { onOpenLine(cl) }
                                 )
                             }
@@ -128,6 +137,9 @@ fun BusPage(
                                 loading = item.loading,
                                 lines = item.lines,
                                 firstLast = item.firstLast,
+                                lineColWidth = remember(item.lines) {
+                                    lineColWidthOf(item.lines.map { it.lineName })
+                                },
                                 onOpenStation = { onOpenStation(item.station) },
                                 onOpenLine = onOpenLine,
                                 onFav = {},
@@ -137,33 +149,46 @@ fun BusPage(
                         }
 
                         item { SectionHeader("$city 其他线路", false, "", {}) }
-                        item {
-                            GlassPanel(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                if (state.lines.isEmpty()) {
+                        if (state.lines.isEmpty()) {
+                            item {
+                                GlassPanel(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
                                     Text(
                                         "暂无线路",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextMuted,
                                         modifier = Modifier.padding(16.dp)
                                     )
-                                } else {
-                                    Column {
-                                        LineTableHeader(showCurrentCol = false)
-                                        state.lines.take(80).forEach { line ->
-                                            TableDivider()
-                                            LineTableRow(
-                                                line = line.lineName,
-                                                from = line.from,
-                                                current = "",
-                                                to = line.to,
-                                                showCurrentCol = false,
-                                                onOpen = { onOpenCityLine(line) }
-                                            )
-                                        }
-                                    }
+                                }
+                            }
+                        } else {
+                            item {
+                                OtherLineCard(roundTop = true) {
+                                    LineTableHeader(lineColWidth = otherWidth)
+                                }
+                            }
+                            itemsIndexed(
+                                state.lines,
+                                key = { i, l -> "ol-$i-${l.lineName}-${l.upperOrDown}" }
+                            ) { i, line ->
+                                val dir = line.upperOrDown.toIntOrNull() ?: 1
+                                val key = "${line.lineName}|$dir"
+                                LaunchedEffect(key, state.otherRound) {
+                                    onLoadCurrent(line.lineName, dir)
+                                }
+                                val lastRow = i == state.lines.lastIndex
+                                OtherLineCard(roundBottom = lastRow) {
+                                    if (i > 0) TableDivider()
+                                    LineTableRow(
+                                        line = line.lineName,
+                                        from = line.from,
+                                        current = state.otherCurrent[key].orEmpty(),
+                                        to = line.to,
+                                        lineColWidth = otherWidth,
+                                        onOpen = { onOpenCityLine(line) }
+                                    )
                                 }
                             }
                         }
@@ -218,3 +243,28 @@ private fun SectionHeader(
 
 private fun formatDistance(m: Int): String =
     if (m >= 1000) String.format("%.1fkm", m / 1000f) else "${m}m"
+
+@Composable
+private fun OtherLineCard(
+    roundTop: Boolean = false,
+    roundBottom: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val shape = when {
+        roundTop && roundBottom -> RoundedCornerShape(20.dp)
+        roundTop -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        roundBottom -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+        else -> RoundedCornerShape(0.dp)
+    }
+    val dark = LocalDark.current
+    val bg = if (dark) Color(0xFF2F3841).copy(alpha = 0.92f)
+    else Color.White.copy(alpha = 0.90f)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(bg)
+    ) {
+        content()
+    }
+}

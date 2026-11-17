@@ -30,6 +30,14 @@ import androidx.compose.ui.unit.sp
 
 val LineColW = 50.dp
 val FavColW = 30.dp
+private const val LineCharDp = 12f
+
+fun lineColWidthOf(names: List<String>): androidx.compose.ui.unit.Dp {
+    val longest = names.maxOfOrNull { displayLine(it).length } ?: 0
+    val chars = longest.coerceIn(0, 5)
+    val w = (chars * LineCharDp + 6f).dp
+    return if (w > LineColW) w else LineColW
+}
 
 fun displayLine(name: String): String {
     val t = name.trim().trimEnd('_', '-', '—', '·', ' ')
@@ -40,7 +48,8 @@ fun displayLine(name: String): String {
 fun LineTableHeader(
     showLineCol: Boolean = true,
     withFav: Boolean = false,
-    showCurrentCol: Boolean = true
+    showCurrentCol: Boolean = true,
+    lineColWidth: androidx.compose.ui.unit.Dp = LineColW
 ) {
     Row(
         Modifier
@@ -54,7 +63,7 @@ fun LineTableHeader(
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 10.sp,
                 color = TextMuted,
-                modifier = Modifier.width(LineColW)
+                modifier = Modifier.width(lineColWidth)
             )
         }
         CellLabel("起始站")
@@ -84,6 +93,7 @@ fun LineTableRow(
     to: String,
     showLineCol: Boolean = true,
     showCurrentCol: Boolean = true,
+    lineColWidth: androidx.compose.ui.unit.Dp = LineColW,
     onOpen: () -> Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -95,7 +105,7 @@ fun LineTableRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (showLineCol) {
-            Box(Modifier.width(LineColW)) {
+            Box(Modifier.width(lineColWidth)) {
                 Text(
                     displayLine(line),
                     style = MaterialTheme.typography.labelMedium,
@@ -122,11 +132,11 @@ fun LineTableRow(
 private fun RowScope.CellText(value: String, color: Color = TextSecondary) {
     Text(
         value.ifBlank { "—" },
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.labelSmall.copy(lineHeight = 13.sp),
         fontSize = 10.sp,
         color = color,
         textAlign = TextAlign.Center,
-        maxLines = 1,
+        maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .weight(1f)
@@ -158,6 +168,7 @@ fun LineTableCard(
     firstLast: Pair<String, String>? = null,
     moreCount: Int = 0,
     showLineCol: Boolean = true,
+    lineColWidth: androidx.compose.ui.unit.Dp = LineColW,
     onOpenStation: () -> Unit,
     onOpenLine: (CardLine) -> Unit,
     onFav: (CardLine) -> Unit,
@@ -243,7 +254,7 @@ fun LineTableCard(
 
                 else -> {
                     Spacer(Modifier.height(4.dp))
-                    LineTableHeader(showLineCol)
+                    LineTableHeader(showLineCol, lineColWidth = lineColWidth)
                     lines.forEach { cl ->
                         TableDivider()
                         LineTableRow(
@@ -252,6 +263,7 @@ fun LineTableCard(
                             current = cl.current,
                             to = cl.to,
                             showLineCol = showLineCol,
+                            lineColWidth = lineColWidth,
                             onOpen = { onOpenLine(cl) }
                         )
                     }

@@ -46,6 +46,7 @@ private val BarW = 26.dp
 private val CylW = 13.dp
 private val RailGap = 12.dp
 private val StationPad = 6.dp
+private val NameRowH = 26.dp
 
 internal fun railColor(token: String): Color {
     val t = token.trim()
@@ -162,30 +163,31 @@ private fun StationLineRow(
                 .drawBehind {
                     val cx = size.width / 2f
                     val half = CylW.toPx() / 2f
-                    val pad = StationPad.toPx()
-                    val top = if (station.first) pad else 0f
-                    val bottom = if (station.last) size.height - pad else size.height
-                    val upper = if (station.first) pad else 0f
-                    val lower = if (station.last) size.height - pad else size.height
-                    if (station.before != "none" && top < lower) {
+                    val dotY = StationPad.toPx() + NameRowH.toPx() / 2f
+                    val top = if (station.first) dotY else 0f
+                    val bottom = if (station.last) dotY else size.height
+                    val beforeColor = if (station.before == "none") station.after else station.before
+                    val afterColor = if (station.after == "none") station.before else station.after
+                    val mid = ((top + bottom) / 2f).coerceIn(top, bottom)
+                    if (top < mid) {
                         drawRect(
-                            railColor(station.before),
-                            Offset(cx - half, upper),
-                            Size(half * 2f, size.height / 2f - upper)
+                            railColor(beforeColor),
+                            Offset(cx - half, top),
+                            Size(half * 2f, mid - top)
                         )
                     }
-                    if (station.after != "none" && upper < bottom) {
+                    if (mid < bottom) {
                         drawRect(
-                            railColor(station.after),
-                            Offset(cx - half, size.height / 2f),
-                            Size(half * 2f, lower - size.height / 2f)
+                            railColor(afterColor),
+                            Offset(cx - half, mid),
+                            Size(half * 2f, bottom - mid)
                         )
                     }
                     if (station.first) {
-                        drawCircle(railColor(station.after), half, Offset(cx, pad))
+                        drawCircle(railColor(afterColor), half, Offset(cx, dotY))
                     }
                     if (station.last) {
-                        drawCircle(railColor(station.before), half, Offset(cx, size.height - pad))
+                        drawCircle(railColor(beforeColor), half, Offset(cx, dotY))
                     }
                 }
         )
@@ -200,6 +202,7 @@ private fun StationLineRow(
             Box(
                 Modifier
                     .fillMaxWidth()
+                    .height(NameRowH)
                     .drawBehind {
                         val cx = -(RailGap.toPx() + BarW.toPx() / 2f)
                         val cy = size.height / 2f
@@ -220,7 +223,10 @@ private fun StationLineRow(
                         else Modifier
                     )
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         station.name,
                         fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Normal,

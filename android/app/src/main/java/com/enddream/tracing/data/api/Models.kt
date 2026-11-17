@@ -77,8 +77,33 @@ data class RouteDetail(
     val planTime: String = "",
     val routeColor: String = "",
     val commonts: String = "",
+    val routeId: Int = 0,
     val firstLast: List<FirstLast> = emptyList(),
     val data: List<Station> = emptyList()
+)
+
+@Serializable
+data class DepartTime(
+    val time: String = "",
+    val status: Int = 0,
+    val notes: String = "",
+    val noteText: String = ""
+)
+
+@Serializable
+data class DepartGroup(
+    val group: String = "",
+    val times: List<DepartTime> = emptyList(),
+    val isNow: Int = 0,
+    val peak: Int = 0
+)
+
+@Serializable
+data class DepartResponse(
+    val list: List<DepartGroup> = emptyList(),
+    val special: String = "",
+    val nextTime: String = "",
+    val status: Int = 0
 )
 
 @Serializable

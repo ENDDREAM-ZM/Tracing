@@ -13,7 +13,8 @@ data class MetroStationRow(
     val lat: Double,
     val si: String = "",
     val transferIds: List<String> = emptyList(),
-    val door: String = ""
+    val door: String = "",
+    val poiid: String = ""
 )
 
 data class MetroTime(
@@ -57,7 +58,8 @@ object MetroParser {
                 val door = st["door"]?.jsonPrimitive?.content
                     ?: st["dr"]?.jsonPrimitive?.content
                     ?: ""
-                MetroStationRow(n, lng, lat, si, ids, door)
+                val poiid = st["poiid"]?.jsonPrimitive?.content.orEmpty()
+                MetroStationRow(n, lng, lat, si, ids, door, poiid)
             } ?: emptyList()
             MetroLineRow(name, fullName, color, stations, loop)
         }
@@ -106,4 +108,67 @@ object MetroParser {
         }
         out
     }.getOrDefault(emptyMap())
+}
+
+object MetroText {
+
+    private val fareOnly = Regex("^全网?分段.*元。?$")
+
+    fun announcement(raw: String): String {
+        val text = raw.replace("\r", "").trim()
+        if (text.isBlank()) return ""
+        val kept = ArrayList<String>()
+        for (line in text.split("\n")) {
+            val t = line.trim()
+            if (t.startsWith("各站首末班") || t.startsWith("普通列车")) break
+            if (fareOnly.matches(t)) continue
+            if (t.endsWith("如下：") || t.endsWith("如下:")) continue
+            kept.add(line)
+        }
+        return kept.joinToString("\n").trim()
+    }
+
+    data class Official(
+        val name: String,
+        val forwardFirst: String,
+        val forwardLast: String,
+        val backwardFirst: String,
+        val backwardLast: String
+    )
+
+    private val pair = Regex("【([^】]*)】\\s*｛([^｝]*)｝")
+    private val clock = Regex("(\\d{1,2}:\\d{2})")
+
+    fun official(raw: String): List<Official> {
+        if (raw.isBlank()) return emptyList()
+        val out = ArrayList<Official>()
+        raw.split("\n").forEach { line ->
+            val t = line.trim()
+            if (!t.contains("【") || !t.contains("｛")) return@forEach
+            val name = t.substringBefore("：").substringBefore(":").trim()
+            if (name.isBlank() || name.length > 20) return@forEach
+            if (name.contains("往") || name.contains("首末班")) return@forEach
+            val m = pair.find(t) ?: return@forEach
+            val fwd = clock.findAll(m.groupValues[1]).map { it.value }.toList()
+            val bwd = clock.findAll(m.groupValues[2]).map { it.value }.toList()
+            if (fwd.size < 2 && bwd.size < 2) return@forEach
+            out.add(
+                Official(
+                    name = name,
+                    forwardFirst = fwd.getOrNull(0).orEmpty(),
+                    forwardLast = fwd.getOrNull(1).orEmpty(),
+                    backwardFirst = bwd.getOrNull(0).orEmpty(),
+                    backwardLast = bwd.getOrNull(1).orEmpty()
+                )
+            )
+        }
+        return out
+    }
+
+    fun fareRange(raw: String): Pair<Double, Double>? {
+        val m = Regex("分段(\\d+)-(\\d+)元").find(raw) ?: return null
+        val a = m.groupValues[1].toDoubleOrNull() ?: return null
+        val b = m.groupValues[2].toDoubleOrNull() ?: return null
+        return a to b
+    }
 }
