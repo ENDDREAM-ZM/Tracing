@@ -45,24 +45,36 @@ object Locate {
     }
 
     @SuppressLint("MissingPermission")
-    private fun lastKnown(lm: LocationManager): Location? = listOf(
+    private fun lastKnown(lm: LocationManager): List<Location> = listOf(
         LocationManager.GPS_PROVIDER,
         LocationManager.NETWORK_PROVIDER,
         LocationManager.PASSIVE_PROVIDER
     ).mapNotNull { p -> runCatching { lm.getLastKnownLocation(p) }.getOrNull() }
-        .maxByOrNull { it.time }
+        .filter { usable(it) }
+
+    private fun usable(l: Location): Boolean {
+        val age = System.currentTimeMillis() - l.time
+        if (age > 3 * 60 * 1000) return false
+        if (!l.hasAccuracy()) return true
+        return l.accuracy <= 500f
+    }
 
     @SuppressLint("MissingPermission")
-    suspend fun current(ctx: Context, timeoutMs: Long = 6000L): Pair<Double, Double>? {
+    suspend fun current(ctx: Context, timeoutMs: Long = 8000L): Pair<Double, Double>? {
         if (!granted(ctx)) return null
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val cached = lastKnown(lm)
         val fresh = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<Location?> { cont ->
+                var best: Location? = null
                 val listener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        runCatching { lm.removeUpdates(this) }
-                        if (cont.isActive) cont.resume(location)
+                        val cur = best
+                        if (cur == null || accuracy(location) < accuracy(cur)) best = location
+                        if (location.hasAccuracy() && location.accuracy <= 30f) {
+                            runCatching { lm.removeUpdates(this) }
+                            if (cont.isActive) cont.resume(best)
+                        }
                     }
 
                     override fun onProviderEnabled(provider: String) {}
@@ -72,25 +84,25 @@ object Locate {
                     @Deprecated("Deprecated in Java")
                     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
                 }
-                val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+                val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
                     .filter { p -> runCatching { lm.isProviderEnabled(p) }.getOrDefault(false) }
                 if (providers.isEmpty()) {
                     if (cont.isActive) cont.resume(null)
                     return@suspendCancellableCoroutine
                 }
-                runCatching {
-                    lm.requestLocationUpdates(
-                        providers.first(),
-                        0L,
-                        0f,
-                        listener,
-                        Looper.getMainLooper()
-                    )
+                providers.forEach { p ->
+                    runCatching {
+                        lm.requestLocationUpdates(p, 0L, 0f, listener, Looper.getMainLooper())
+                    }
                 }
                 cont.invokeOnCancellation { runCatching { lm.removeUpdates(listener) } }
             }
         }
-        val best = listOfNotNull(cached, fresh).maxByOrNull { it.time } ?: return null
+        val pool = cached + listOfNotNull(fresh)
+        if (pool.isEmpty()) return null
+        val best = pool.minByOrNull { accuracy(it) } ?: return null
         return best.longitude to best.latitude
     }
+
+    private fun accuracy(l: Location): Float = if (l.hasAccuracy()) l.accuracy else 9999f
 }
