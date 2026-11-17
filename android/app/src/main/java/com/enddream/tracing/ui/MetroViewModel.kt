@@ -311,7 +311,13 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                     }
                 }
             }
-            _state.value = _state.value.copy(noticeText = MetroText.dedupe(text), noticeLoading = false)
+            _state.value = _state.value.copy(
+                noticeText = MetroText.dedupe(
+                    MetroText.clean(text),
+                    listOf(line.fullName, line.name)
+                ),
+                noticeLoading = false
+            )
         }
     }
 
