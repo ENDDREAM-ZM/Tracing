@@ -64,16 +64,16 @@ object Locate {
         if (!granted(ctx)) return null
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val cached = lastKnown(lm)
-        val fresh = withTimeoutOrNull(timeoutMs) {
-            suspendCancellableCoroutine<Location?> { cont ->
-                var best: Location? = null
+        var bestFix: Location? = null
+        withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine<Unit> { cont ->
                 val listener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        val cur = best
-                        if (cur == null || accuracy(location) < accuracy(cur)) best = location
+                        val cur = bestFix
+                        if (cur == null || accuracy(location) < accuracy(cur)) bestFix = location
                         if (location.hasAccuracy() && location.accuracy <= 30f) {
                             runCatching { lm.removeUpdates(this) }
-                            if (cont.isActive) cont.resume(best)
+                            if (cont.isActive) cont.resume(Unit)
                         }
                     }
 
@@ -87,7 +87,7 @@ object Locate {
                 val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
                     .filter { p -> runCatching { lm.isProviderEnabled(p) }.getOrDefault(false) }
                 if (providers.isEmpty()) {
-                    if (cont.isActive) cont.resume(null)
+                    if (cont.isActive) cont.resume(Unit)
                     return@suspendCancellableCoroutine
                 }
                 providers.forEach { p ->
@@ -98,7 +98,8 @@ object Locate {
                 cont.invokeOnCancellation { runCatching { lm.removeUpdates(listener) } }
             }
         }
-        val pool = cached + listOfNotNull(fresh)
+        val fresh = bestFix
+        val pool = if (fresh != null) cached + fresh else cached
         if (pool.isEmpty()) return null
         val best = pool.minByOrNull { accuracy(it) } ?: return null
         return best.longitude to best.latitude
