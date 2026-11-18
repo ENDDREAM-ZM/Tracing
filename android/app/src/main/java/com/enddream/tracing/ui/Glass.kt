@@ -149,7 +149,7 @@ fun GlassBar(
     shadow: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
-    glassSurface(modifier, shape, LocalBarBackdrop.current, shadow, blur = true, blurRadius = 12.dp, content = content)
+    glassSurface(modifier, shape, LocalBarBackdrop.current, shadow, blur = true, blurRadius = 10.dp, content = content)
 }
 
 @Composable
@@ -263,9 +263,9 @@ internal fun GlassOverlayLayer() {
             backdrop = LocalOverlayBackdrop.current,
             shadow = true,
             blur = true,
-            blurRadius = 14.dp,
-            tint = if (dark) Color(0xFF16181B).copy(alpha = 0.58f)
-            else Color(0xFFFFFFFF).copy(alpha = 0.56f)
+            blurRadius = 10.dp,
+            tint = if (dark) Color(0xFF16181B).copy(alpha = 0.56f)
+            else Color(0xFFFFFFFF).copy(alpha = 0.58f)
         ) {
             Column(
                 Modifier
@@ -316,7 +316,7 @@ fun GlassDialogButton(text: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        backdrop = LocalOverlayBackdrop.current,
+        backdrop = null,
         shadow = false,
         tint = MaterialTheme.colorScheme.primary.copy(
             alpha = if (LocalDark.current) 0.34f else 0.18f
