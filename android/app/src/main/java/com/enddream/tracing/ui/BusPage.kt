@@ -250,12 +250,11 @@ private fun OtherLineCard(
         roundBottom -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
         else -> RoundedCornerShape(0.dp)
     }
-    glassSurface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = shape,
-        backdrop = LocalGlassBackdrop.current,
-        shadow = false,
-        highlightAlpha = 0f
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(glassTint())
     ) {
         content()
     }

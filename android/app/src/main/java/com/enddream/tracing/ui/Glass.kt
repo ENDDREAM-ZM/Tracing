@@ -30,11 +30,11 @@ internal fun glassSurface(
     backdrop: Backdrop?,
     shadow: Boolean,
     highlightAlpha: Float? = null,
+    blur: Boolean = false,
     content: @Composable BoxScope.() -> Unit
 ) {
     val dark = LocalDark.current
-    val tint = if (dark) Color(0xFF16181B).copy(alpha = 0.52f)
-    else Color(0xFFFFFFFF).copy(alpha = 0.52f)
+    val tint = glassTint()
     val shadowBlock: (() -> Shadow?)? = if (shadow) {
         {
             Shadow(
@@ -49,7 +49,7 @@ internal fun glassSurface(
             backdrop = backdrop,
             shape = { shape },
             effects = {
-                blur(24.dp.toPx())
+                if (blur) blur(24.dp.toPx())
             },
             highlight = highlightAlpha?.let { a -> { Highlight.Default.copy(alpha = a) } }
                 ?: {
@@ -70,6 +70,12 @@ internal fun glassSurface(
             )
     }
     Box(base, content = content)
+}
+
+@Composable
+internal fun glassTint(): Color {
+    val dark = LocalDark.current
+    return if (dark) Color(0xFF16181B).copy(alpha = 0.52f) else Color(0xFFFFFFFF).copy(alpha = 0.52f)
 }
 
 @Composable
@@ -106,5 +112,5 @@ fun GlassBar(
     shadow: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
-    glassSurface(modifier, shape, LocalBarBackdrop.current, shadow, content = content)
+    glassSurface(modifier, shape, LocalBarBackdrop.current, shadow, blur = true, content = content)
 }
