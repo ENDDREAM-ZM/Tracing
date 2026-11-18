@@ -124,7 +124,7 @@ fun MetroPage(
         Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp)
-            .padding(top = LocalTopInset.current)
+            .padding(top = LocalTopInset.current, bottom = LocalBottomInset.current)
     ) {
         state.notice?.let { n ->
             Spacer(Modifier.height(2.dp))
@@ -692,12 +692,14 @@ private fun NoticeCard(text: String) {
     var expanded by remember(text) { mutableStateOf(false) }
     val accent = Color(0xFFE5484D)
     val dark = LocalDark.current
-    val bg = if (dark) accent.copy(alpha = 0.16f) else accent.copy(alpha = 0.08f)
+    GlassPanel(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        shadow = false
+    ) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(bg)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.Top) {
@@ -740,5 +742,6 @@ private fun NoticeCard(text: String) {
                 )
             }
         }
+    }
     }
 }

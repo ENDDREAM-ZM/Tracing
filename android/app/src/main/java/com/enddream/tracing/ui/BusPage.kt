@@ -23,6 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.enddream.tracing.data.api.BusLine
@@ -250,11 +256,33 @@ private fun OtherLineCard(
         roundBottom -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
         else -> RoundedCornerShape(0.dp)
     }
+    val dark = LocalDark.current
+    val line = if (dark) Color.White.copy(alpha = 0.13f) else Color.White.copy(alpha = 0.78f)
     Box(
         Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(glassTint())
+            .drawBehind {
+                val w = size.width
+                val h = size.height
+                val r = 20.dp.toPx()
+                val sw = 1.dp.toPx()
+                if (!roundTop && !roundBottom) {
+                    drawLine(line, Offset(0f, 0f), Offset(0f, h), sw)
+                    drawLine(line, Offset(w - sw, 0f), Offset(w - sw, h), sw)
+                } else {
+                    clipRect(0f, 0f, w, h) {
+                        drawRoundRect(
+                            color = line,
+                            topLeft = Offset(0f, if (roundTop) 0f else -r),
+                            size = Size(w, h + r),
+                            cornerRadius = CornerRadius(r, r),
+                            style = Stroke(sw)
+                        )
+                    }
+                }
+            }
     ) {
         content()
     }
