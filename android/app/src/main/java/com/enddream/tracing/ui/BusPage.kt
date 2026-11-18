@@ -250,14 +250,12 @@ private fun OtherLineCard(
         roundBottom -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
         else -> RoundedCornerShape(0.dp)
     }
-    val dark = LocalDark.current
-    val bg = if (dark) Color(0xFF2F3841).copy(alpha = 0.92f)
-    else Color.White.copy(alpha = 0.90f)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(bg)
+    glassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        backdrop = LocalGlassBackdrop.current,
+        shadow = false,
+        highlightAlpha = 0f
     ) {
         content()
     }
