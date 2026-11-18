@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "XingJi"
+rootProject.name = "Tracing"
 include(":app")

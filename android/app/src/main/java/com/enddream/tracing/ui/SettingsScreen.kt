@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -484,6 +483,3 @@ val TextSecondary: Color
 
 val TextMuted: Color
     @Composable get() = if (LocalDark.current) Color(0xFF868D93) else Color(0xFF868C8A)
-
-val ChipIdle: Color
-    @Composable get() = if (LocalDark.current) Color(0xFF2F3337) else Color(0xFFEDEFEE)
