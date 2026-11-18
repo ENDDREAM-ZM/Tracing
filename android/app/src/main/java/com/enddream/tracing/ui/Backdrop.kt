@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 internal fun DrawScope.paintBackdrop(dark: Boolean, scheme: ColorScheme) {
@@ -56,6 +57,8 @@ fun BackdropHost(modifier: Modifier = Modifier, content: @Composable () -> Unit)
     val density = LocalDensity.current
     val height = LocalConfiguration.current.screenHeightDp
     val barBackdrop = rememberLayerBackdrop()
+    val overlayBackdrop = rememberLayerBackdrop()
+    val overlay = remember { GlassOverlayState() }
     val glassBackdrop = remember(dark, height) {
         val top = if (dark) Color(0xFF1C1E21) else Color(0xFFF4F5F7)
         val bottom = if (dark) Color(0xFF121316) else Color(0xFFE8EAEC)
@@ -63,14 +66,19 @@ fun BackdropHost(modifier: Modifier = Modifier, content: @Composable () -> Unit)
     }
     CompositionLocalProvider(
         LocalBarBackdrop provides barBackdrop,
-        LocalGlassBackdrop provides glassBackdrop
+        LocalGlassBackdrop provides glassBackdrop,
+        LocalOverlayBackdrop provides overlayBackdrop,
+        LocalGlassOverlay provides overlay
     ) {
         Box(
             modifier
                 .fillMaxSize()
                 .drawBehind { paintBackdrop(dark, scheme) }
         ) {
-            content()
+            Box(Modifier.fillMaxSize().layerBackdrop(overlayBackdrop)) {
+                content()
+            }
+            GlassOverlayLayer()
         }
     }
 }
