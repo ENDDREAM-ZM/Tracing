@@ -15,13 +15,14 @@ val keystoreProps = Properties().apply {
 android {
     namespace = "com.enddream.tracing"
     compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.enddream.tracing"
         minSdk = 28
         targetSdk = 36
-        versionCode = 307
-        versionName = "1.3.7"
+        versionCode = 308
+        versionName = "1.3.8"
         vectorDrawables.useSupportLibrary = true
     }
 

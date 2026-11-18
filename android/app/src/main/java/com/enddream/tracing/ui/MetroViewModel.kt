@@ -280,16 +280,19 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
     }
 
     fun loadNotice(line: MetroLineRow, direction: Int) {
-        val head = line.stations.firstOrNull()
-        val tail = line.stations.lastOrNull()
+        val a = if (direction == 2) line.stations.lastOrNull() else line.stations.firstOrNull()
+        val b = if (direction == 2) line.stations.firstOrNull() else line.stations.lastOrNull()
+        val ids = lineIdsOf(_state.value.lineIdMap, line)
+        val names = listOf(line.fullName, line.name, "地铁${line.name}").distinct()
         viewModelScope.launch {
             _state.value = _state.value.copy(noticeLoading = true)
             var text = ""
-            if (head != null && tail != null) {
+            if (a != null && b != null) {
                 text = runCatching {
                     MetroApi().lineNotice(
-                        head.lat, head.lng, head.poiid,
-                        tail.lat, tail.lng, tail.poiid
+                        a.lat, a.lng, a.poiid,
+                        b.lat, b.lng, b.poiid,
+                        ids, names
                     )
                 }.getOrDefault("")
             }
