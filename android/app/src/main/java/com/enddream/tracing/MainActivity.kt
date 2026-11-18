@@ -159,6 +159,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     var favorites by remember { mutableStateOf(emptyList<com.enddream.tracing.data.Favorite>()) }
     var locateTick by remember { mutableStateOf(0) }
     var autoEnter by remember { mutableStateOf(true) }
+    var firstRun by remember { mutableStateOf(false) }
+    var askPerm by remember { mutableStateOf(false) }
     var prefsLoaded by remember { mutableStateOf(false) }
     var refreshSec by remember { mutableStateOf(10) }
     var floatBar by remember { mutableStateOf(true) }
@@ -197,10 +199,25 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         autoEnter = false
         locating = false
         cityLocked = true
+        tab = MainTab.BUS
         scope.launch { Prefs.setCity(ctx, picked) }
         busVm.setCity(picked)
         busVm.loadAll()
         locateTick++
+    }
+
+    val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        permGranted = grants.values.any { it }
+        if (permGranted) locateTick++
+    }
+
+    fun openCityPage() {
+        autoEnter = false
+        locatedCity = locatedCity.ifBlank { city }
+        locating = false
+        entered = false
     }
 
     LaunchedEffect(Unit) {
@@ -220,7 +237,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     LaunchedEffect(prefsLoaded) {
         if (!prefsLoaded) return@LaunchedEffect
         permGranted = Locate.granted(ctx)
-        if (!entered && permGranted) locateTick++
+        if (firstRun && !entered) {
+            askPerm = true
+            locateTick++
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -233,6 +253,9 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             busVm.setCity(saved)
             busVm.loadAll()
             locateTick++
+        } else {
+            firstRun = true
+            autoEnter = true
         }
         refreshSec = runCatching { Prefs.refreshSec(ctx) }.getOrDefault(10)
         floatBar = runCatching { Prefs.floatBar(ctx) }.getOrDefault(true)
@@ -241,23 +264,20 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         prefsLoaded = true
     }
 
-    val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        permGranted = grants.values.any { it }
-        if (permGranted) locateTick++
-    }
 
     LaunchedEffect(locateTick, prefsLoaded) {
         if (locateTick == 0 || !prefsLoaded) return@LaunchedEffect
         permGranted = Locate.granted(ctx)
         if (!permGranted) {
-            locationLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+            if (askPerm) {
+                askPerm = false
+                locationLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
                 )
-            )
+            }
             return@LaunchedEffect
         }
         locating = true
@@ -322,6 +342,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     }
 
     if (!entered) {
+        BackHandler(enabled = city.isNotBlank()) { entered = true }
         CityStartScreen(
             current = city,
             granted = permGranted,
@@ -330,6 +351,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             onPick = { enter(it) },
             onLocate = {
                 autoEnter = false
+                askPerm = true
                 locateTick++
             }
         )
@@ -348,10 +370,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                     if (it == MainTab.FAVORITE) favVm.load(favorites, refresh = true)
                 },
                 city = city,
-                onPickCity = {
-                    autoEnter = false
-                    entered = false
-                },
+                onPickCity = { openCityPage() },
                 floatBar = floatBar,
                 topSlot = if (tab == MainTab.BUS) {
                     { com.enddream.tracing.ui.BusSearchBar(busStateForBar) { busVm.onKeywordChange(it) } }
@@ -417,10 +436,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                         city = city,
                         refreshSec = refreshSec,
                         notifyOn = notifyOn,
-                        onPickCity = {
-                            autoEnter = false
-                            entered = false
-                        },
+                        onPickCity = { openCityPage() },
                         onRefreshChange = { sec ->
                             refreshSec = sec
                             scope.launch { Prefs.setRefreshSec(ctx, sec) }

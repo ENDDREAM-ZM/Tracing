@@ -60,30 +60,45 @@ fun FavButton(
     modifier: Modifier = Modifier,
     showLabel: Boolean = false
 ) {
-    Row(
-        modifier = modifier
-            .background(
-                if (fav) FavRed.copy(alpha = 0.12f) else Color.Transparent,
-                RoundedCornerShape(12.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = if (showLabel) 8.dp else 6.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            if (fav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = "收藏",
-            modifier = Modifier.size(17.dp),
-            tint = if (fav) FavRed else TextMuted.copy(alpha = 0.65f)
-        )
-        if (showLabel) {
-            Spacer(Modifier.width(4.dp))
-            Text(
-                "收藏",
-                style = MaterialTheme.typography.labelMedium,
-                fontSize = 12.sp,
-                color = if (fav) FavRed else TextSecondary
+    if (showLabel) {
+        GlassChip(modifier = modifier, corner = 12.dp, onClick = onClick) {
+            Row(
+                Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    if (fav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = "收藏",
+                    modifier = Modifier.size(15.dp),
+                    tint = if (fav) FavRed else TextMuted.copy(alpha = 0.65f)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "收藏",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 11.sp,
+                    color = if (fav) FavRed else TextSecondary
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = modifier
+                .background(
+                    if (fav) FavRed.copy(alpha = 0.12f) else Color.Transparent,
+                    RoundedCornerShape(12.dp)
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                if (fav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = "收藏",
+                modifier = Modifier.size(17.dp),
+                tint = if (fav) FavRed else TextMuted.copy(alpha = 0.65f)
             )
         }
     }

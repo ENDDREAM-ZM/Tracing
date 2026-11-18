@@ -111,15 +111,15 @@ fun SettingsScreen(
                 Text(versionName, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
             RowDivider()
-            LinkRow("数据来源", "查看", false) { showSources = true }
+            LinkRow("数据来源", "查看") { showSources = true }
             RowDivider()
-            LinkRow("权限说明", "查看", false) { showPerms = true }
+            LinkRow("权限说明", "查看") { showPerms = true }
             RowDivider()
-            LinkRow("项目地址", "前往", true) {
+            LinkRow("项目地址", "前往") {
                 openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing")
             }
             RowDivider()
-            LinkRow("开放源代码许可", "查看", false) { showLicenses = true }
+            LinkRow("开放源代码许可", "查看") { showLicenses = true }
         }
 
         Spacer(Modifier.height(LocalBottomInset.current + 40.dp))
@@ -245,7 +245,7 @@ private fun RowDivider() {
 }
 
 @Composable
-private fun LinkRow(label: String, hint: String, arrow: Boolean, onClick: () -> Unit) {
+private fun LinkRow(label: String, hint: String, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -265,14 +265,6 @@ private fun LinkRow(label: String, hint: String, arrow: Boolean, onClick: () -> 
             color = TextMuted,
             maxLines = 1
         )
-        if (arrow) {
-            Spacer(Modifier.width(4.dp))
-            Text(
-                "›",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextMuted
-            )
-        }
     }
 }
 

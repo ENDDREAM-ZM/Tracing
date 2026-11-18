@@ -1,6 +1,7 @@
 package com.enddream.tracing.ui
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,6 +81,14 @@ fun MetroPage(
         if (Prefs.metroNoticeOff(ctx)) vm.noticeOff = true
     }
 
+    BackHandler(enabled = showTimetable || state.selectedLine != null || state.city != null) {
+        when {
+            showTimetable -> showTimetable = false
+            state.selectedLine != null -> vm.backToLines()
+            else -> vm.backToCities()
+        }
+    }
+
     LaunchedEffect(state.selectedLine, state.reverse) {
         val line = state.selectedLine ?: return@LaunchedEffect
         vm.loadNotice(line, if (state.reverse) 2 else 1)
@@ -155,7 +164,6 @@ fun MetroPage(
                         subtitle = "往 ${if (state.reverse) line.stations.firstOrNull()?.name else line.stations.lastOrNull()?.name} 方向",
                         reverse = state.reverse,
                         onReverse = { vm.toggleDirection() },
-                        onTimetable = { showTimetable = true },
                         isFav = metroFav,
                         onFav = {
                             scope.launch {
@@ -191,41 +199,40 @@ fun MetroPage(
                             "${fmtYuan(state.linePriceMin)}-${fmtYuan(state.linePrice)} 元"
                         else "${fmtYuan(state.linePrice)} 元"
                     } else ""
-                    if (lengthText.isNotBlank() || priceText.isNotBlank() || fl != null) {
-                        Spacer(Modifier.height(2.dp))
-                        androidx.compose.foundation.layout.FlowRow(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            itemVerticalAlignment = Alignment.CenterVertically
+                    Spacer(Modifier.height(2.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (lengthText.isNotBlank()) {
+                            Text(
+                                lengthText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                maxLines = 1
+                            )
+                        }
+                        if (priceText.isNotBlank()) {
+                            Text(
+                                priceText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                maxLines = 1
+                            )
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (lengthText.isNotBlank()) {
-                                Text(
-                                    lengthText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
-                            if (priceText.isNotBlank()) {
-                                Text(
-                                    priceText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
                             if (fl != null) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TimeBadge(true, fl.first, 10)
-                                    TimeBadge(false, fl.second, 10)
-                                }
+                                TimeBadge(true, fl.first, 10)
+                                TimeBadge(false, fl.second, 10)
                             }
+                            Pill("时刻表") { showTimetable = true }
                         }
                     }
                     state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
@@ -286,7 +293,6 @@ fun MetroPage(
                         subtitle = "${state.lines.size} 条线路",
                         reverse = false,
                         onReverse = null,
-                        onTimetable = null,
                         onBack = { vm.backToCities() }
                     )
                     Spacer(Modifier.height(8.dp))
@@ -591,7 +597,6 @@ private fun SubHeader(
     subtitle: String,
     reverse: Boolean,
     onReverse: (() -> Unit)?,
-    onTimetable: (() -> Unit)?,
     isFav: Boolean = false,
     onFav: (() -> Unit)? = null,
     onBack: () -> Unit
@@ -620,23 +625,21 @@ private fun SubHeader(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                    color = TextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            if (onFav != null) {
-                FavButton(fav = isFav, showLabel = true, onClick = onFav)
-                Spacer(Modifier.width(2.dp))
-            }
-            if (onTimetable != null || onReverse != null) {
+            if (onFav != null || onReverse != null) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    if (onFav != null) {
+                        FavButton(fav = isFav, showLabel = true, onClick = onFav)
+                    }
                     if (onReverse != null) {
                         Pill(if (reverse) "正向" else "换向", onReverse)
-                    }
-                    if (onTimetable != null) {
-                        Pill("时刻表", onTimetable)
                     }
                 }
             }
