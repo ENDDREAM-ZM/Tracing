@@ -57,7 +57,10 @@ import com.enddream.tracing.ui.RouteScreen
 import com.enddream.tracing.ui.SettingsScreen
 import com.enddream.tracing.ui.StationLinesScreen
 import com.enddream.tracing.ui.TracingTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface Screen {
     data object Main : Screen
@@ -157,6 +160,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     var locating by remember { mutableStateOf(false) }
     var favorites by remember { mutableStateOf(emptyList<com.enddream.tracing.data.Favorite>()) }
     var locateTick by remember { mutableStateOf(0) }
+    var autoEnter by remember { mutableStateOf(true) }
+    var prefsLoaded by remember { mutableStateOf(false) }
     var refreshSec by remember { mutableStateOf(10) }
     var floatBar by remember { mutableStateOf(true) }
     var notifyOn by remember { mutableStateOf(false) }
@@ -191,6 +196,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     fun enter(picked: String) {
         city = picked
         entered = true
+        autoEnter = false
+        locating = false
         cityLocked = true
         scope.launch { Prefs.setCity(ctx, picked) }
         busVm.setCity(picked)
@@ -212,7 +219,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         }.getOrDefault(emptyList())
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(prefsLoaded) {
+        if (!prefsLoaded) return@LaunchedEffect
         permGranted = Locate.granted(ctx)
         if (!entered && permGranted) locateTick++
     }
@@ -223,6 +231,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         if (picked && saved.isNotBlank()) {
             city = saved
             entered = true
+            autoEnter = false
             busVm.setCity(saved)
             busVm.loadAll()
             locateTick++
@@ -231,6 +240,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         floatBar = runCatching { Prefs.floatBar(ctx) }.getOrDefault(true)
         notifyOn = runCatching { Prefs.notifyEnabled(ctx) }.getOrDefault(false)
         if (notifyOn) ensureNotifyPermission()
+        prefsLoaded = true
     }
 
     val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -240,8 +250,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
         if (permGranted) locateTick++
     }
 
-    LaunchedEffect(locateTick) {
-        if (locateTick == 0) return@LaunchedEffect
+    LaunchedEffect(locateTick, prefsLoaded) {
+        if (locateTick == 0 || !prefsLoaded) return@LaunchedEffect
         permGranted = Locate.granted(ctx)
         if (!permGranted) {
             locationLauncher.launch(
@@ -253,31 +263,42 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             return@LaunchedEffect
         }
         locating = true
-        val pos = Locate.current(ctx)
-        locating = false
+        val pos = withContext(Dispatchers.IO) { Locate.current(ctx) }
         if (pos == null) {
+            locating = false
             toast("定位失败，请检查系统定位开关")
             return@LaunchedEffect
         }
         busVm.locate(pos.first, pos.second)
-        val hits = Locate.candidates(ctx, pos.second, pos.first)
-        val hit = hits.firstNotNullOfOrNull { c ->
-            allCities.firstOrNull { it == c }
-                ?: allCities.firstOrNull { it.removeSuffix("市") == c.removeSuffix("市") }
-                ?: allCities.firstOrNull { c.contains(it.removeSuffix("市")) && it.removeSuffix("市").length >= 2 }
-        }
-        if (hit != null) locatedCity = hit
-        if (hit != null && hit != city && !cityLocked) {
-            if (!entered) enter(hit) else {
-                city = hit
-                scope.launch { Prefs.setCity(ctx, hit) }
-                busVm.setCity(hit)
-                busVm.loadAll()
-                busVm.locate(pos.first, pos.second)
+        val cities = withTimeoutOrNull(1500) {
+            while (allCities.isEmpty()) kotlinx.coroutines.delay(60)
+            allCities
+        } ?: allCities
+        if (cities.isNotEmpty()) {
+            val hits = withContext(Dispatchers.IO) { Locate.candidates(ctx, pos.second, pos.first) }
+            val hit = hits.firstNotNullOfOrNull { c ->
+                cities.firstOrNull { it == c }
+                    ?: cities.firstOrNull { it.removeSuffix("市") == c.removeSuffix("市") }
+                    ?: cities.firstOrNull { c.contains(it.removeSuffix("市")) && it.removeSuffix("市").length >= 2 }
             }
-        } else if (!entered) {
-            enter(city.ifBlank { "厦门市" })
+            if (hit != null) locatedCity = hit
+            if (hit != null && hit != city) {
+                if (!entered && autoEnter) {
+                    enter(hit)
+                    locating = false
+                    return@LaunchedEffect
+                }
+                if (entered && !cityLocked) {
+                    city = hit
+                    scope.launch { Prefs.setCity(ctx, hit) }
+                    busVm.setCity(hit)
+                    busVm.loadAll()
+                    busVm.locate(pos.first, pos.second)
+                }
+            }
         }
+        if (!entered && autoEnter) enter(city.ifBlank { "厦门市" })
+        locating = false
     }
 
     LaunchedEffect(refreshSec) { metroVm.refreshSec = refreshSec }
@@ -309,7 +330,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             locatedCity = locatedCity,
             locating = locating,
             onPick = { enter(it) },
-            onLocate = { locateTick++ }
+            onLocate = {
+                autoEnter = false
+                locateTick++
+            }
         )
         return
     }
@@ -326,7 +350,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                     if (it == MainTab.FAVORITE) favVm.load(favorites, refresh = true)
                 },
                 city = city,
-                onPickCity = { entered = false },
+                onPickCity = {
+                    autoEnter = false
+                    entered = false
+                },
                 floatBar = floatBar,
                 topSlot = if (tab == MainTab.BUS) {
                     { com.enddream.tracing.ui.BusSearchBar(busStateForBar) { busVm.onKeywordChange(it) } }
@@ -392,7 +419,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                         city = city,
                         refreshSec = refreshSec,
                         notifyOn = notifyOn,
-                        onPickCity = { entered = false },
+                        onPickCity = {
+                            autoEnter = false
+                            entered = false
+                        },
                         onRefreshChange = { sec ->
                             refreshSec = sec
                             scope.launch { Prefs.setRefreshSec(ctx, sec) }

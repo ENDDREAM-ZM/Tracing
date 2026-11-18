@@ -29,7 +29,10 @@ object Locate {
         city?.trim()?.let { if (it.endsWith("市")) it else "${it}市" }
     }.getOrNull()
 
-    fun candidates(ctx: Context, lat: Double, lng: Double): List<String> = runCatching {
+    fun candidates(ctx: Context, lat: Double, lng: Double): List<String> {
+        val now = System.currentTimeMillis()
+        cachedCity?.let { (t, v) -> if (now - t < 5 * 60 * 1000) return v }
+        val r = runCatching {
         val geocoder = android.location.Geocoder(ctx, java.util.Locale.CHINA)
         @Suppress("DEPRECATION")
         val a = geocoder.getFromLocation(lat, lng, 1).orEmpty().firstOrNull() ?: return@runCatching emptyList()
@@ -37,12 +40,17 @@ object Locate {
             .map { it.trim() }
             .filter { it.isNotBlank() }
     }.getOrDefault(emptyList())
+        if (r.isNotEmpty()) cachedCity = now to r
+        return r
+    }
 
     fun granted(ctx: Context): Boolean {
         val fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
         val coarse = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION)
         return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
     }
+
+    private var cachedCity: Pair<Long, List<String>>? = null
 
     @SuppressLint("MissingPermission")
     private fun lastKnown(lm: LocationManager): List<Location> = listOf(
@@ -60,18 +68,23 @@ object Locate {
     }
 
     @SuppressLint("MissingPermission")
-    suspend fun current(ctx: Context, timeoutMs: Long = 8000L): Pair<Double, Double>? {
+    suspend fun current(ctx: Context, timeoutMs: Long = 3000L): Pair<Double, Double>? {
         if (!granted(ctx)) return null
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val cached = lastKnown(lm)
-        var bestFix: Location? = null
+        val now = System.currentTimeMillis()
+        val quick = cached
+            .filter { now - it.time <= 60_000 && accuracy(it) <= 200f }
+            .minByOrNull { accuracy(it) }
+        if (quick != null) return quick.longitude to quick.latitude
+        var bestFix: Location? = cached.minByOrNull { accuracy(it) }
         withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<Unit> { cont ->
                 val listener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
                         val cur = bestFix
                         if (cur == null || accuracy(location) < accuracy(cur)) bestFix = location
-                        if (location.hasAccuracy() && location.accuracy <= 30f) {
+                        if (location.hasAccuracy() && location.accuracy <= 100f) {
                             runCatching { lm.removeUpdates(this) }
                             if (cont.isActive) cont.resume(Unit)
                         }

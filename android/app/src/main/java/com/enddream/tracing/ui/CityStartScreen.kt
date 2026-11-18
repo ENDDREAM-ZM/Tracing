@@ -116,7 +116,6 @@ fun CityStartScreen(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onLocate)
                             .padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -125,13 +124,23 @@ fun CityStartScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             fontSize = 15.sp,
                             color = TextPrimary,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = !locating && locatedCity.isNotBlank()) {
+                                    onPick(locatedCity)
+                                }
                         )
-                        Text(
-                            "重新定位",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Box(
+                            Modifier
+                                .clickable(enabled = !locating, onClick = onLocate)
+                                .padding(horizontal = 4.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "重新定位",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (locating) TextMuted else MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             } else {

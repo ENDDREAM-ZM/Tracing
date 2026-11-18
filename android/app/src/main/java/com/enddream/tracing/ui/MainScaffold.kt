@@ -2,6 +2,7 @@ package com.enddream.tracing.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -97,7 +99,28 @@ fun MainScaffold(
                         .fillMaxSize()
                         .drawBehind { paintBackdrop(dark, scheme) }
                 )
-                content()
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(tab) {
+                            var dx = 0f
+                            detectHorizontalDragGestures(
+                                onDragStart = { dx = 0f },
+                                onHorizontalDrag = { _, drag -> dx += drag },
+                                onDragEnd = {
+                                    val th = 110.dp.toPx()
+                                    val i = MainTab.entries.indexOf(tab)
+                                    if (dx <= -th && i < MainTab.entries.lastIndex) {
+                                        onTabChange(MainTab.entries[i + 1])
+                                    } else if (dx >= th && i > 0) {
+                                        onTabChange(MainTab.entries[i - 1])
+                                    }
+                                }
+                            )
+                        }
+                ) {
+                    content()
+                }
             }
         }
 
