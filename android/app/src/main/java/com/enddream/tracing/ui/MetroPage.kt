@@ -200,40 +200,41 @@ fun MetroPage(
                         else "${fmtYuan(state.linePrice)} 元"
                     } else ""
                     Spacer(Modifier.height(2.dp))
-                    androidx.compose.foundation.layout.FlowRow(
+                    Row(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        itemVerticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (lengthText.isNotBlank()) {
-                            Text(
-                                lengthText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                maxLines = 1
-                            )
-                        }
-                        if (priceText.isNotBlank()) {
-                            Text(
-                                priceText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                maxLines = 1
-                            )
-                        }
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (fl != null) {
-                                TimeBadge(true, fl.first, 10)
-                                TimeBadge(false, fl.second, 10)
+                            if (lengthText.isNotBlank()) {
+                                Text(
+                                    lengthText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1
+                                )
                             }
-                            Pill("时刻表") { showTimetable = true }
+                            if (priceText.isNotBlank()) {
+                                Text(
+                                    priceText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                         }
+                        if (fl != null) {
+                            TimeBadge(true, fl.first, 10)
+                            Spacer(Modifier.width(6.dp))
+                            TimeBadge(false, fl.second, 10)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Pill("时刻表") { showTimetable = true }
                     }
                     state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
                         Spacer(Modifier.height(8.dp))
@@ -631,9 +632,9 @@ private fun SubHeader(
                 )
             }
             if (onFav != null || onReverse != null) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (onFav != null) {
                         FavButton(fav = isFav, showLabel = true, onClick = onFav)
