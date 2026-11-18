@@ -159,11 +159,23 @@ fun MetroPage(
                             if (state.reverse) 2 else 1, "metro"
                         )
                     }
+                    val lengthText = if (state.lineLength > 0) {
+                        "全程 " + String.format("%.1f", state.lineLength / 1000.0) + " 公里"
+                    } else ""
+                    val priceText = if (state.linePrice > 0.0) {
+                        "票价 " + if (state.linePriceMin > 0.0 && state.linePriceMin < state.linePrice)
+                            "${fmtYuan(state.linePriceMin)}-${fmtYuan(state.linePrice)} 元"
+                        else "${fmtYuan(state.linePrice)} 元"
+                    } else ""
                     SubHeader(
                         title = line.fullName,
                         subtitle = "往 ${if (state.reverse) line.stations.firstOrNull()?.name else line.stations.lastOrNull()?.name} 方向",
                         reverse = state.reverse,
                         onReverse = { vm.toggleDirection() },
+                        lengthText = lengthText,
+                        priceText = priceText,
+                        firstLast = fl,
+                        onTimetable = { showTimetable = true },
                         isFav = metroFav,
                         onFav = {
                             scope.launch {
@@ -191,51 +203,6 @@ fun MetroPage(
                             }
                         }
                     ) { vm.backToLines() }
-                    val lengthText = if (state.lineLength > 0) {
-                        "全程 " + String.format("%.1f", state.lineLength / 1000.0) + " 公里"
-                    } else ""
-                    val priceText = if (state.linePrice > 0.0) {
-                        "票价 " + if (state.linePriceMin > 0.0 && state.linePriceMin < state.linePrice)
-                            "${fmtYuan(state.linePriceMin)}-${fmtYuan(state.linePrice)} 元"
-                        else "${fmtYuan(state.linePrice)} 元"
-                    } else ""
-                    Spacer(Modifier.height(2.dp))
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (lengthText.isNotBlank()) {
-                                Text(
-                                    lengthText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
-                            if (priceText.isNotBlank()) {
-                                Text(
-                                    priceText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                        if (fl != null) {
-                            TimeBadge(true, fl.first, 10)
-                            Spacer(Modifier.width(6.dp))
-                            TimeBadge(false, fl.second, 10)
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        Pill("时刻表") { showTimetable = true }
-                    }
                     state.noticeText?.takeIf { it.isNotBlank() }?.let { txt ->
                         Spacer(Modifier.height(8.dp))
                         NoticeCard(txt)
@@ -598,6 +565,10 @@ private fun SubHeader(
     subtitle: String,
     reverse: Boolean,
     onReverse: (() -> Unit)?,
+    lengthText: String = "",
+    priceText: String = "",
+    firstLast: Pair<String, String>? = null,
+    onTimetable: (() -> Unit)? = null,
     isFav: Boolean = false,
     onFav: (() -> Unit)? = null,
     onBack: () -> Unit
@@ -605,7 +576,7 @@ private fun SubHeader(
     Column(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Bottom
         ) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -633,15 +604,66 @@ private fun SubHeader(
             }
             if (onFav != null || onReverse != null) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(SlotGap)
                 ) {
                     if (onFav != null) {
-                        FavButton(fav = isFav, showLabel = true, onClick = onFav)
+                        FavButton(
+                            fav = isFav,
+                            showLabel = true,
+                            modifier = Modifier.width(SlotW),
+                            onClick = onFav
+                        )
                     }
                     if (onReverse != null) {
-                        Pill(if (reverse) "正向" else "换向", onReverse)
+                        Pill(if (reverse) "正向" else "换向", Modifier.width(SlotW), onReverse)
                     }
+                }
+            }
+        }
+        if (lengthText.isNotBlank() || priceText.isNotBlank() || firstLast != null || onTimetable != null) {
+            Spacer(Modifier.height(SlotGap))
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (lengthText.isNotBlank()) {
+                        Text(
+                            lengthText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (priceText.isNotBlank()) {
+                        Text(
+                            priceText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                if (firstLast != null) {
+                    TimeBadge(true, firstLast.first, 10)
+                    Spacer(Modifier.width(SlotGap))
+                    Box(
+                        Modifier.width(SlotW),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        TimeBadge(false, firstLast.second, 10)
+                    }
+                    Spacer(Modifier.width(SlotGap))
+                }
+                if (onTimetable != null) {
+                    Pill("时刻表", Modifier.width(SlotW), onTimetable)
                 }
             }
         }
@@ -652,17 +674,27 @@ internal fun displayMetroLine(name: String): String =
     name.trim().removePrefix("地铁")
 
 @Composable
-private fun Pill(text: String, onClick: () -> Unit) {
-    GlassChip(corner = 12.dp, onClick = onClick) {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-        )
+private fun Pill(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    GlassChip(modifier = modifier, corner = 12.dp, onClick = onClick) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1
+            )
+        }
     }
 }
+
+private val SlotW = 62.dp
+private val SlotGap = 6.dp
 
 private fun String.toComposeColor(): Color = runCatching {
     if (isBlank()) Color(0xFF4FD6C0) else Color(("FF" + this).toLong(16))
