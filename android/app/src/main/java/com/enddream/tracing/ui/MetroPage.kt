@@ -22,10 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -124,7 +122,7 @@ fun MetroPage(
         Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp)
-            .padding(top = LocalTopInset.current, bottom = LocalBottomInset.current)
+            .padding(top = LocalTopInset.current)
     ) {
         state.notice?.let { n ->
             Spacer(Modifier.height(2.dp))
@@ -413,10 +411,13 @@ fun MetroPage(
     detailStation?.let { st ->
         val entry = state.times[st.si].orEmpty()
         val firstLast = com.enddream.tracing.data.MetroTimetable.firstLastOf(entry)
-        androidx.compose.material3.AlertDialog(
+        GlassDialog(
             onDismissRequest = { detailStation = null },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
+            title = st.name,
+            buttons = {
+                GlassDialogButton("取消") { detailStation = null }
+                Spacer(Modifier.width(8.dp))
+                GlassDialogButton("导航") {
                     val target = state.selectedLine?.stations?.firstOrNull { it.name == st.name }
                     if (target != null) {
                         onNavigate(target.name, target.lat, target.lng)
@@ -424,17 +425,9 @@ fun MetroPage(
                         onNavigate(st.name, st.lat, st.lng)
                     }
                     detailStation = null
-                }) {
-                    androidx.compose.material3.Text("导航")
                 }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { detailStation = null }) {
-                    androidx.compose.material3.Text("取消")
-                }
-            },
-            title = { androidx.compose.material3.Text(st.name) },
-            text = {
+            }
+        ) {
                 Column {
                     Text(
                         "是否导航到「${st.name}」站？",
@@ -474,8 +467,7 @@ fun MetroPage(
                         }
                     }
                 }
-            }
-        )
+        }
     }
 }
 
@@ -499,19 +491,18 @@ private fun NoticeBanner(
     var askClose by remember { mutableStateOf(false) }
     var forever by remember { mutableStateOf(false) }
     if (askClose) {
-        AlertDialog(
+        GlassDialog(
             onDismissRequest = { askClose = false },
-            confirmButton = {
-                TextButton(onClick = {
+            title = "关闭提示",
+            buttons = {
+                GlassDialogButton("取消") { askClose = false }
+                Spacer(Modifier.width(8.dp))
+                GlassDialogButton("关闭") {
                     askClose = false
                     onDismiss(forever)
-                }) { Text("关闭") }
-            },
-            dismissButton = {
-                TextButton(onClick = { askClose = false }) { Text("取消") }
-            },
-            title = { Text("关闭提示") },
-            text = {
+                }
+            }
+        ) {
                 Column {
                     Text(
                         "关闭后不再提示「${notice.city} 暂无地铁」",
@@ -528,8 +519,7 @@ private fun NoticeBanner(
                         )
                     }
                 }
-            }
-        )
+        }
     }
     GlassPanel(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
         Row(
@@ -662,20 +652,13 @@ internal fun displayMetroLine(name: String): String =
 
 @Composable
 private fun Pill(text: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .clickable(onClick = onClick)
-            .background(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                RoundedCornerShape(12.dp)
-            )
-            .padding(horizontal = 10.dp, vertical = 5.dp)
-    ) {
+    GlassChip(corner = 12.dp, onClick = onClick) {
         Text(
             text,
             style = MaterialTheme.typography.labelMedium,
             fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
         )
     }
 }

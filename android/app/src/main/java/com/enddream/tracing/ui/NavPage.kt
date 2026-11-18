@@ -1,6 +1,5 @@
 package com.enddream.tracing.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.items
@@ -166,16 +165,12 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
                 )
             }
         }
-        Box(
-            Modifier
-                .clickable(onClick = onClick)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
+        GlassChip(corner = 12.dp, onClick = onClick) {
             Text(
                 "前往",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
     }

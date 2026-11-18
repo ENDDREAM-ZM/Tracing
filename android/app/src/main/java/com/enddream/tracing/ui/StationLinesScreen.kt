@@ -1,7 +1,6 @@
 package com.enddream.tracing.ui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -141,19 +140,12 @@ fun StationLinesScreen(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    Box(
-                                        Modifier
-                                            .clickable(onClick = onGo)
-                                            .background(
-                                                MaterialTheme.colorScheme.primary,
-                                                RoundedCornerShape(10.dp)
-                                            )
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                                    ) {
+                                    GlassChip(corner = 10.dp, onClick = onGo) {
                                         Text(
                                             "前往",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                         )
                                     }
                                     Spacer(Modifier.width(4.dp))

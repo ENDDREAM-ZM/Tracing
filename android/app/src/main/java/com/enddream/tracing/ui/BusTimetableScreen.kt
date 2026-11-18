@@ -264,20 +264,13 @@ private fun FlowTimes(times: List<String>, nowMinute: Int) {
     ) {
         times.forEach { t ->
             val isNext = t == next
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(
-                        if (isNext) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
+            GlassChip(corner = 7.dp, selected = isNext) {
                 Text(
                     t,
                     style = MaterialTheme.typography.labelMedium,
                     fontSize = 12.sp,
-                    color = if (isNext) MaterialTheme.colorScheme.primary else TextSecondary
+                    color = if (isNext) MaterialTheme.colorScheme.primary else TextSecondary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }

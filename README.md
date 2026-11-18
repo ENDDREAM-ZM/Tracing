@@ -39,16 +39,21 @@ gradle :app:assembleRelease
 
 数据来源：
 
-- 掌上公交 ：公交线路、站点、实时车辆、发车时刻表，地铁各站首末班
-- 高德地图 ：地铁线网、换乘线路、全程里程、票价与运营公告
+- 掌上公交：公交线路、站点、实时车辆、发车时刻表，地铁城市表
+- 高德地图：地铁线网、换乘线路、全程里程、票价与运营公告
+- Android 系统定位服务与已安装的地图应用
 
-开源库：
+开放源代码许可：
 
-- [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- [Kotlin](https://kotlinlang.org)
-- [Backdrop](https://github.com/Kyant0/AndroidLiquidGlass)
-- [OkHttp](https://square.github.io/okhttp)
-- [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)
+- [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass)（Apache-2.0）：液态玻璃模糊、高光与阴影
+- [Jetpack Compose](https://developer.android.com/jetpack/compose)（Apache-2.0）：界面框架，含 Material 3
+- [Material Icons](https://fonts.google.com/icons)（Apache-2.0）：界面图标
+- [AndroidX](https://developer.android.com/jetpack/androidx)（Apache-2.0）：Core、Activity、Lifecycle、DataStore
+- [Kotlin](https://kotlinlang.org)（Apache-2.0）：开发语言与标准库
+- [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines)（Apache-2.0）：协程
+- [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)（Apache-2.0）：JSON 解析
+- [OkHttp](https://square.github.io/okhttp)（Apache-2.0）：网络请求
+- [Okio](https://square.github.io/okio)（Apache-2.0）：I/O 库
 
 ## License
 

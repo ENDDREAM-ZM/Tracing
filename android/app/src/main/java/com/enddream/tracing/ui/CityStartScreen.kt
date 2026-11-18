@@ -1,6 +1,5 @@
 package com.enddream.tracing.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -111,62 +110,57 @@ fun CityStartScreen(
             }
             Spacer(Modifier.height(10.dp))
             if (granted) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(16.dp)
-                        )
-                        .clickable(onClick = onLocate)
-                        .padding(horizontal = 14.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                GlassPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Text(
-                        if (locating) "定位中…" else "定位城市：${locatedCity.ifBlank { "—" }}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        "重新定位",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-                    )
-                }
-            } else {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(16.dp)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "开启定位权限可自动选择城市",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Box(
+                    Row(
                         Modifier
-                            .background(
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f),
-                                RoundedCornerShape(10.dp)
-                            )
+                            .fillMaxWidth()
                             .clickable(onClick = onLocate)
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "去开启",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            if (locating) "定位中…" else "定位城市：${locatedCity.ifBlank { "—" }}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontSize = 15.sp,
+                            color = TextPrimary,
+                            modifier = Modifier.weight(1f)
                         )
+                        Text(
+                            "重新定位",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            } else {
+                GlassPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "开启定位权限可自动选择城市",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontSize = 15.sp,
+                            color = TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GlassChip(corner = 11.dp, onClick = onLocate) {
+                            Text(
+                                "去开启",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -263,27 +257,28 @@ private fun Grid5(items: List<String>, current: String, onPick: (String) -> Unit
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { name ->
                     val selected = name == current
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onPick(name) }
-                            .padding(horizontal = 4.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                    GlassChip(
+                        modifier = Modifier.weight(1f),
+                        corner = 11.dp,
+                        selected = selected,
+                        onClick = { onPick(name) }
                     ) {
-                        Text(
-                            name,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                            color = if (selected) MaterialTheme.colorScheme.onPrimary else TextPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                name,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                                color = if (selected) MaterialTheme.colorScheme.primary else TextPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
                 repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -299,27 +294,28 @@ private fun Grid5Select(items: List<String>, selected: String, onPick: (String) 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { name ->
                     val on = name == selected
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .background(
-                                if (on) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onPick(name) }
-                            .padding(horizontal = 4.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                    GlassChip(
+                        modifier = Modifier.weight(1f),
+                        corner = 11.dp,
+                        selected = on,
+                        onClick = { onPick(name) }
                     ) {
-                        Text(
-                            name,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                            color = if (on) MaterialTheme.colorScheme.onPrimary else TextPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                name,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                                color = if (on) MaterialTheme.colorScheme.primary else TextPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
                 repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }

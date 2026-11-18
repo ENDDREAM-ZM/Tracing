@@ -12,17 +12,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +49,7 @@ fun SettingsScreen(
     onOpenPermissions: () -> Unit,
 ) {
     var showSources by remember { mutableStateOf(false) }
-    var showThanks by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
     val versionName = runCatching {
         val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
@@ -114,160 +113,81 @@ fun SettingsScreen(
                 Text(versionName, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
             RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { showThanks = true }
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "致谢",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "查看",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
-                )
+            LinkRow("权限说明", "全部权限与用途", true) { onOpenPermissions() }
+            RowDivider()
+            LinkRow("项目地址", "前往", true) {
+                openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing")
             }
             RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { showSources = true }
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "数据来源",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "查看",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
-                )
-            }
+            LinkRow("开放源代码许可", "查看", false) { showLicenses = true }
             RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing") }
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "项目地址",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "前往",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "›",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted
-                )
-            }
-            RowDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenPermissions)
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "权限说明",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "全部权限与用途",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted,
-                    maxLines = 1
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "›",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted
-                )
-            }
+            LinkRow("数据来源", "查看", false) { showSources = true }
         }
 
         Spacer(Modifier.height(LocalBottomInset.current + 40.dp))
     }
 
     if (showSources) {
-        AlertDialog(
+        GlassDialog(
             onDismissRequest = { showSources = false },
-            confirmButton = {
-                TextButton(onClick = { showSources = false }) { Text("知道了") }
-            },
-            title = { Text("数据来源") },
-            text = {
-                Column {
-                    listOf(
-                        "公交数据" to "掌上公交 h5.mygolbs.com",
-                        "地铁线网" to "高德地图 webapi.amap.com",
-                        "地铁首末班" to "高德地图 subway/data",
-                        "地铁公告" to "高德地图 subway/busExt",
-                        "地铁城市表" to "掌上公交 metro.mygolbs.com",
-                        "定位" to "Android 系统定位服务",
-                        "导航" to "已安装的地图应用"
-                    ).forEach { (k, v) ->
-                        Row(Modifier.padding(vertical = 3.dp)) {
-                            Text(
-                                k,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted,
-                                modifier = Modifier.width(80.dp)
-                            )
-                            Text(
-                                v,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+            title = "数据来源",
+            buttons = {
+                GlassDialogButton("知道了") { showSources = false }
+            }
+        ) {
+            Column {
+                listOf(
+                    "公交数据" to "掌上公交 h5.mygolbs.com",
+                    "地铁线网" to "高德地图 webapi.amap.com",
+                    "地铁首末班" to "高德地图 subway/data",
+                    "地铁公告" to "高德地图 subway/busExt",
+                    "地铁城市表" to "掌上公交 metro.mygolbs.com",
+                    "定位" to "Android 系统定位服务",
+                    "导航" to "已安装的地图应用"
+                ).forEach { (k, v) ->
+                    Row(Modifier.padding(vertical = 3.dp)) {
+                        Text(
+                            k,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted,
+                            modifier = Modifier.width(80.dp)
+                        )
+                        Text(
+                            v,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
-        )
+        }
     }
 
-    if (showThanks) {
-        AlertDialog(
-            onDismissRequest = { showThanks = false },
-            confirmButton = {
-                TextButton(onClick = { showThanks = false }) { Text("关闭") }
-            },
-            title = { Text("致谢") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    ThanksItem("掌上公交", "公交线路、站点与实时车辆数据", "https://h5.mygolbs.com")
-                    ThanksItem("高德地图", "地铁线网、首末班与公告", "https://webapi.amap.com")
-                    ThanksItem("Jetpack Compose", "Android 界面框架", "https://developer.android.com/jetpack/compose")
-                    ThanksItem("Kotlin", "开发语言", "https://kotlinlang.org")
-                    ThanksItem("OkHttp", "网络请求", "https://square.github.io/okhttp")
-                    ThanksItem("kotlinx.serialization", "JSON 解析", "https://github.com/Kotlin/kotlinx.serialization")
-                    ThanksItem("Material Icons", "图标", "https://fonts.google.com/icons")
-                }
+    if (showLicenses) {
+        GlassDialog(
+            onDismissRequest = { showLicenses = false },
+            title = "开放源代码许可",
+            subtitle = "追迹使用的第三方开源组件",
+            buttons = {
+                GlassDialogButton("关闭") { showLicenses = false }
             }
-        )
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                licenseList.forEach { item -> LicenseRow(item) }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "追迹自身以 MIT 许可证开源",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+            }
+        }
     }
 }
 
@@ -297,21 +217,131 @@ private fun RowDivider() {
 }
 
 @Composable
-private fun ThanksItem(title: String, desc: String, url: String) {
+private fun LinkRow(label: String, hint: String, arrow: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextPrimary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            hint,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+            maxLines = 1
+        )
+        if (arrow) {
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "›",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextMuted
+            )
+        }
+    }
+}
+
+private data class LicenseEntry(
+    val name: String,
+    val desc: String,
+    val license: String,
+    val url: String
+)
+
+private val licenseList = listOf(
+    LicenseEntry(
+        "AndroidLiquidGlass",
+        "液态玻璃模糊、高光与阴影效果",
+        "Apache-2.0",
+        "https://github.com/Kyant0/AndroidLiquidGlass"
+    ),
+    LicenseEntry(
+        "Jetpack Compose",
+        "Android 界面框架，含 Material 3 组件库",
+        "Apache-2.0",
+        "https://developer.android.com/jetpack/compose"
+    ),
+    LicenseEntry(
+        "Material Icons",
+        "界面图标",
+        "Apache-2.0",
+        "https://fonts.google.com/icons"
+    ),
+    LicenseEntry(
+        "AndroidX Core / Activity / Lifecycle",
+        "系统能力、页面生命周期与 Compose 集成",
+        "Apache-2.0",
+        "https://developer.android.com/jetpack/androidx"
+    ),
+    LicenseEntry(
+        "AndroidX DataStore",
+        "设置项与收藏的本地存储",
+        "Apache-2.0",
+        "https://developer.android.com/topic/libraries/architecture/datastore"
+    ),
+    LicenseEntry(
+        "Kotlin",
+        "开发语言与标准库",
+        "Apache-2.0",
+        "https://kotlinlang.org"
+    ),
+    LicenseEntry(
+        "kotlinx.coroutines",
+        "协程与异步任务",
+        "Apache-2.0",
+        "https://github.com/Kotlin/kotlinx.coroutines"
+    ),
+    LicenseEntry(
+        "kotlinx.serialization",
+        "JSON 解析",
+        "Apache-2.0",
+        "https://github.com/Kotlin/kotlinx.serialization"
+    ),
+    LicenseEntry(
+        "OkHttp",
+        "网络请求",
+        "Apache-2.0",
+        "https://square.github.io/okhttp"
+    ),
+    LicenseEntry(
+        "Okio",
+        "OkHttp 依赖的 I/O 库",
+        "Apache-2.0",
+        "https://square.github.io/okio"
+    )
+)
+
+@Composable
+private fun LicenseRow(item: LicenseEntry) {
     val ctx = LocalContext.current
     Column(
         Modifier
             .fillMaxWidth()
-            .clickable { openUrl(ctx, url) }
+            .clickable { openUrl(ctx, item.url) }
             .padding(vertical = 5.dp)
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                item.license,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted
+            )
+        }
         Text(
-            title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            desc,
+            item.desc,
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted
         )
@@ -332,40 +362,47 @@ private fun openUrl(ctx: android.content.Context, url: String) {
 @Composable
 private fun CityButton(city: String, onClick: () -> Unit) {
     Box(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-        Row(
-            Modifier
+        GlassPanel(
+            modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(14.dp),
+            shadow = false,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
         ) {
-            Column(Modifier.weight(1f)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "默认城市",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        city,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
-                    "默认城市",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+                    "更换",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.width(2.dp))
                 Text(
-                    city,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    "›",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextMuted
                 )
             }
-            Text(
-                "更换",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                "›",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-            )
         }
     }
 }
@@ -416,23 +453,25 @@ private fun RowScope.SegRow(
 ) {
     options.forEach { (key, label) ->
         val selected = current == key
-        Box(
-            Modifier
-                .weight(1f)
-                .background(
-                    if (selected) MaterialTheme.colorScheme.primary else ChipIdle,
-                    RoundedCornerShape(10.dp)
-                )
-                .clickable { onPick(key) }
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
+        GlassChip(
+            modifier = Modifier.weight(1f),
+            corner = 11.dp,
+            selected = selected,
+            onClick = { onPick(key) }
         ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) MaterialTheme.colorScheme.onPrimary else TextPrimary,
-                maxLines = 1
-            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) MaterialTheme.colorScheme.primary else TextPrimary,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

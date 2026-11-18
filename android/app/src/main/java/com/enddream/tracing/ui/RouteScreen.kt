@@ -23,8 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -243,38 +241,27 @@ fun RouteScreen(
             ) {
                 SpeedLegend()
                 Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier
-                        .clickable {
-                            dir = if (dir == 1) 2 else 1
-                            alerted = false
-                        }
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                GlassChip(
+                    corner = 12.dp,
+                    onClick = {
+                        dir = if (dir == 1) 2 else 1
+                        alerted = false
+                    }
                 ) {
                     Text(
                         "换向",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
                 Spacer(Modifier.width(6.dp))
-                Box(
-                    Modifier
-                        .clickable { showTimetable = true }
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
+                GlassChip(corner = 12.dp, onClick = { showTimetable = true }) {
                     Text(
                         "时刻表",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -345,20 +332,24 @@ fun RouteScreen(
         }
 
         navStation?.let { st ->
-            AlertDialog(
+            GlassDialog(
                 onDismissRequest = { navStation = null },
-                confirmButton = {
-                    TextButton(onClick = {
+                title = st.name,
+                buttons = {
+                    GlassDialogButton("取消") { navStation = null }
+                    Spacer(Modifier.width(8.dp))
+                    GlassDialogButton("导航") {
                         navStation = null
                         onNavigate(st.lat, st.lng, "${st.name}站")
-                    }) { Text("导航") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { navStation = null }) { Text("取消") }
-                },
-                title = { Text(st.name) },
-                text = { Text("是否导航到「${st.name}」站？") }
-            )
+                    }
+                }
+            ) {
+                Text(
+                    "是否导航到「${st.name}」站？",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
         }
     }
 }

@@ -2,17 +2,42 @@ package com.enddream.tracing.ui
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -31,10 +56,10 @@ internal fun glassSurface(
     shadow: Boolean,
     highlightAlpha: Float? = null,
     blur: Boolean = false,
+    tint: Color = glassTint(),
     content: @Composable BoxScope.() -> Unit
 ) {
     val dark = LocalDark.current
-    val tint = glassTint()
     val shadowBlock: (() -> Shadow?)? = if (shadow) {
         {
             Shadow(
@@ -64,10 +89,8 @@ internal fun glassSurface(
         modifier
             .then(if (shadow) Modifier.shadow(14.dp, shape) else Modifier)
             .clip(shape)
-            .background(
-                if (dark) Color(0xFF23262A).copy(alpha = 0.96f)
-                else Color(0xFFFFFFFF).copy(alpha = 0.96f)
-            )
+            .background(if (dark) Color(0xFF23262A) else Color(0xFFFFFFFF))
+            .background(tint)
     }
     Box(base, content = content)
 }
@@ -79,13 +102,20 @@ internal fun glassTint(): Color {
 }
 
 @Composable
+internal fun glassStroke(): Color {
+    val dark = LocalDark.current
+    return if (dark) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.70f)
+}
+
+@Composable
 fun GlassPanel(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(24.dp),
     shadow: Boolean = true,
+    tint: Color = glassTint(),
     content: @Composable BoxScope.() -> Unit
 ) {
-    glassSurface(modifier, shape, LocalGlassBackdrop.current, shadow, content = content)
+    glassSurface(modifier, shape, LocalGlassBackdrop.current, shadow, tint = tint, content = content)
 }
 
 @Composable
@@ -100,9 +130,10 @@ fun GlassFrosted(
 @Composable
 fun GlassPill(
     modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(22.dp),
     content: @Composable BoxScope.() -> Unit
 ) {
-    glassSurface(modifier, RoundedCornerShape(22.dp), LocalGlassBackdrop.current, false, content = content)
+    glassSurface(modifier, shape, LocalGlassBackdrop.current, false, content = content)
 }
 
 @Composable
@@ -113,4 +144,134 @@ fun GlassBar(
     content: @Composable BoxScope.() -> Unit
 ) {
     glassSurface(modifier, shape, LocalBarBackdrop.current, shadow, blur = true, content = content)
+}
+
+@Composable
+fun GlassChip(
+    modifier: Modifier = Modifier,
+    corner: Dp = 10.dp,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val dark = LocalDark.current
+    val primary = MaterialTheme.colorScheme.primary
+    val fill = if (selected) primary.copy(alpha = if (dark) 0.34f else 0.22f) else glassTint()
+    val stroke = if (selected) primary.copy(alpha = if (dark) 0.55f else 0.45f) else glassStroke()
+    Box(
+        modifier
+            .clip(RoundedCornerShape(corner))
+            .background(fill)
+            .drawBehind {
+                drawRect(
+                    Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = if (dark) 0.05f else 0.12f), Color.Transparent)
+                    )
+                )
+                drawRoundRect(
+                    color = stroke,
+                    topLeft = Offset(0f, 0f),
+                    size = Size(size.width, size.height),
+                    cornerRadius = CornerRadius(corner.toPx(), corner.toPx()),
+                    style = Stroke(1.dp.toPx())
+                )
+            }
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick
+                ) else Modifier
+            ),
+        content = content
+    )
+}
+
+@Composable
+fun GlassDialog(
+    onDismissRequest: () -> Unit,
+    title: String? = null,
+    subtitle: String? = null,
+    buttons: @Composable RowScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val dark = LocalDark.current
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val noIndication = remember { MutableInteractionSource() }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = if (dark) 0.50f else 0.28f))
+                .clickable(
+                    interactionSource = noIndication,
+                    indication = null,
+                    onClick = onDismissRequest
+                )
+                .padding(horizontal = 26.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            glassSurface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = noIndication,
+                        indication = null,
+                        onClick = {}
+                    ),
+                shape = RoundedCornerShape(28.dp),
+                backdrop = LocalGlassBackdrop.current,
+                shadow = true
+            ) {
+                Column(Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
+                    if (title != null) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = TextPrimary
+                        )
+                        if (subtitle != null) {
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted
+                            )
+                        }
+                        Spacer(Modifier.height(14.dp))
+                    }
+                    Column(Modifier.fillMaxWidth()) { content() }
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = buttons
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GlassDialogButton(text: String, onClick: () -> Unit) {
+    glassSurface(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        backdrop = LocalGlassBackdrop.current,
+        shadow = false,
+        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    ) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
+        )
+    }
 }

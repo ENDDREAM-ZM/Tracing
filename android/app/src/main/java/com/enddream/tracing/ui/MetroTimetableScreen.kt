@@ -187,22 +187,19 @@ private fun DirectionTab(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     val fg = if (selected) MaterialTheme.colorScheme.primary else TextSecondary
-    Row(
-        Modifier
-            .background(bg, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            color = fg,
-            maxLines = 1
-        )
+    GlassChip(corner = 12.dp, selected = selected, onClick = onClick) {
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = fg,
+                maxLines = 1
+            )
+        }
     }
 }
 
