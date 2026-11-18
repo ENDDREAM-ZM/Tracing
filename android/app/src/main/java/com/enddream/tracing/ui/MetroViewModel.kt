@@ -296,11 +296,16 @@ class MetroViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                     )
                 }.getOrDefault("")
             }
+            val strip = listOf(line.fullName, line.name)
+                .filter { it.isNotBlank() }
+                .sortedByDescending { it.length }
+            val merged = MetroText.dedupe(MetroText.clean(text), strip)
+            val display = merged.split("\n").joinToString("\n") { raw ->
+                val hit = strip.firstOrNull { raw.startsWith(it) }
+                if (hit == null) raw else raw.removePrefix(hit).trimStart('：', ':', '，', ',', ' ')
+            }.trim()
             _state.value = _state.value.copy(
-                noticeText = MetroText.dedupe(
-                    MetroText.clean(text),
-                    listOf(line.fullName, line.name)
-                ),
+                noticeText = display,
                 noticeLoading = false
             )
         }
