@@ -44,14 +44,14 @@ fun SettingsScreen(
     onNotifyChange: (Boolean) -> Unit,
     onThemeChange: (String) -> Unit,
     onFloatBarChange: (Boolean) -> Unit,
-    onOpenPermissions: () -> Unit,
 ) {
     var showSources by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showPerms by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
     val versionName = runCatching {
         val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
-        "${pi.versionName} (vc${pi.longVersionCode.toInt()})"
+        pi.versionName.orEmpty()
     }.getOrDefault("")
 
     Column(
@@ -113,7 +113,7 @@ fun SettingsScreen(
             RowDivider()
             LinkRow("数据来源", "查看", false) { showSources = true }
             RowDivider()
-            LinkRow("权限说明", "全部权限与用途", true) { onOpenPermissions() }
+            LinkRow("权限说明", "查看", false) { showPerms = true }
             RowDivider()
             LinkRow("项目地址", "前往", true) {
                 openUrl(ctx, "https://github.com/ENDDREAM-ZM/Tracing")
@@ -123,6 +123,41 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.height(LocalBottomInset.current + 40.dp))
+    }
+
+    if (showPerms) {
+        GlassDialog(
+            onDismissRequest = { showPerms = false },
+            title = "权限说明",
+            subtitle = "追迹申请的全部权限及用途",
+            buttons = {
+                GlassDialogButton("关闭") { showPerms = false }
+            }
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                permList.forEach { p ->
+                    Row(Modifier.padding(vertical = 6.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                p.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary
+                            )
+                            Text(
+                                p.why,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted
+                            )
+                        }
+                        Text(
+                            if (p.required) "必需" else "可选",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (p.required) MaterialTheme.colorScheme.primary else TextMuted
+                        )
+                    }
+                }
+            }
+        }
     }
 
     if (showSources) {
@@ -468,6 +503,19 @@ private fun RowScope.SegRow(
         }
     }
 }
+
+private data class PermItem(
+    val name: String,
+    val why: String,
+    val required: Boolean
+)
+
+private val permList = listOf(
+    PermItem("位置信息", "定位所在城市、附近站点与最近车辆", false),
+    PermItem("通知", "公交、地铁的到站提醒", false),
+    PermItem("振动", "到站提醒时用振动提示", false),
+    PermItem("网络", "获取线路、站点、实时车辆与地铁线网数据", true)
+)
 
 val TextPrimary: Color
     @Composable get() = if (LocalDark.current) Color(0xFFE8EAEC) else Color(0xFF1A1C1B)

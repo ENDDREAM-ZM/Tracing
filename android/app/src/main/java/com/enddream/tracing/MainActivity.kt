@@ -52,7 +52,6 @@ import com.enddream.tracing.ui.MainTab
 import com.enddream.tracing.ui.MapNav
 import com.enddream.tracing.ui.MetroPage
 import com.enddream.tracing.ui.NavPage
-import com.enddream.tracing.ui.PermissionsScreen
 import com.enddream.tracing.ui.RouteScreen
 import com.enddream.tracing.ui.SettingsScreen
 import com.enddream.tracing.ui.StationLinesScreen
@@ -81,7 +80,6 @@ sealed interface Screen {
         val lat: Double
     ) : Screen
 
-    data object Permissions : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -442,7 +440,6 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                             floatBar = on
                             scope.launch { Prefs.setFloatBar(ctx, on) }
                         },
-                        onOpenPermissions = { screen = Screen.Permissions }
                     )
 
                     MainTab.FAVORITE -> {
@@ -485,8 +482,6 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             onNavigate = { lat, lng, name -> navigate(lat, lng, name) },
             onBack = { screen = Screen.Main }
         )
-
-        Screen.Permissions -> PermissionsScreen(onBack = { screen = Screen.Main })
 
         is Screen.Station -> StationLinesScreen(
             city = s.city,
