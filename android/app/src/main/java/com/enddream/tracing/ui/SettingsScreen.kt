@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -112,6 +111,8 @@ fun SettingsScreen(
                 Text(versionName, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
             RowDivider()
+            LinkRow("数据来源", "查看", false) { showSources = true }
+            RowDivider()
             LinkRow("权限说明", "全部权限与用途", true) { onOpenPermissions() }
             RowDivider()
             LinkRow("项目地址", "前往", true) {
@@ -119,8 +120,6 @@ fun SettingsScreen(
             }
             RowDivider()
             LinkRow("开放源代码许可", "查看", false) { showLicenses = true }
-            RowDivider()
-            LinkRow("数据来源", "查看", false) { showSources = true }
         }
 
         Spacer(Modifier.height(LocalBottomInset.current + 40.dp))
@@ -172,12 +171,7 @@ fun SettingsScreen(
                 GlassDialogButton("关闭") { showLicenses = false }
             }
         ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            Column(Modifier.fillMaxWidth()) {
                 licenseList.forEach { item -> LicenseRow(item) }
                 Spacer(Modifier.height(4.dp))
                 Text(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -15,8 +16,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -188,6 +192,51 @@ fun GlassChip(
 }
 
 @Composable
+private fun glassFace(
+    corner: Dp,
+    tint: Color,
+    stroke: Color,
+    base: Boolean = true
+): Modifier {
+    val dark = LocalDark.current
+    val shape = RoundedCornerShape(corner)
+    return Modifier
+        .clip(shape)
+        .drawBehind {
+            if (base) {
+                drawRect(
+                    Brush.verticalGradient(
+                        listOf(
+                            if (dark) Color(0xFF1C1E21) else Color(0xFFF4F5F7),
+                            if (dark) Color(0xFF121316) else Color(0xFFE8EAEC)
+                        )
+                    )
+                )
+            } else {
+                drawRect(if (dark) Color(0xFF24272B) else Color(0xFFFFFFFF))
+            }
+            drawRect(tint)
+            drawRect(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (dark) 0.06f else 0.22f),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = size.height * 0.55f
+                )
+            )
+            drawRoundRect(
+                color = stroke,
+                topLeft = Offset(0f, 0f),
+                size = Size(size.width, size.height),
+                cornerRadius = CornerRadius(corner.toPx(), corner.toPx()),
+                style = Stroke(1.dp.toPx())
+            )
+        }
+}
+
+@Composable
 fun GlassDialog(
     onDismissRequest: () -> Unit,
     title: String? = null,
@@ -196,61 +245,74 @@ fun GlassDialog(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val dark = LocalDark.current
+    val shape = RoundedCornerShape(28.dp)
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         val noIndication = remember { MutableInteractionSource() }
-        Box(
+        BoxWithConstraints(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (dark) 0.50f else 0.28f))
+                .background(Color.Black.copy(alpha = if (dark) 0.50f else 0.26f))
                 .clickable(
                     interactionSource = noIndication,
                     indication = null,
                     onClick = onDismissRequest
                 )
-                .padding(horizontal = 26.dp),
+                .padding(horizontal = 26.dp, vertical = 36.dp),
             contentAlignment = Alignment.Center
         ) {
-            glassSurface(
-                modifier = Modifier
+            val panelMax = maxHeight
+            Column(
+                Modifier
                     .fillMaxWidth()
+                    .shadow(
+                        elevation = 20.dp,
+                        shape = shape,
+                        ambientColor = Color.Black.copy(alpha = 0.22f),
+                        spotColor = Color.Black.copy(alpha = 0.30f)
+                    )
+                    .then(glassFace(28.dp, Color.Transparent, glassStroke()))
                     .clickable(
                         interactionSource = noIndication,
                         indication = null,
                         onClick = {}
-                    ),
-                shape = RoundedCornerShape(28.dp),
-                backdrop = LocalGlassBackdrop.current,
-                shadow = true
-            ) {
-                Column(Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
-                    if (title != null) {
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = TextPrimary
-                        )
-                        if (subtitle != null) {
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                subtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted
-                            )
-                        }
-                        Spacer(Modifier.height(14.dp))
-                    }
-                    Column(Modifier.fillMaxWidth()) { content() }
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = buttons
                     )
+                    .padding(horizontal = 22.dp, vertical = 20.dp)
+                    .heightIn(max = panelMax)
+            ) {
+                if (title != null) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary
+                    )
+                    if (subtitle != null) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted
+                        )
+                    }
+                    Spacer(Modifier.height(14.dp))
                 }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    content()
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = buttons
+                )
             }
         }
     }
@@ -258,14 +320,18 @@ fun GlassDialog(
 
 @Composable
 fun GlassDialogButton(text: String, onClick: () -> Unit) {
-    glassSurface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        backdrop = LocalGlassBackdrop.current,
-        shadow = false,
-        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        Modifier
+            .then(
+                glassFace(
+                    12.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = if (LocalDark.current) 0.30f else 0.14f),
+                    glassStroke(),
+                    base = false
+                )
+            )
+            .clickable { onClick() }
     ) {
         Text(
             text,
