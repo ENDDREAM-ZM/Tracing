@@ -441,7 +441,8 @@ data class RouteUiState(
     val upcoming: Set<String> = emptySet(),
     val lastName: String = "",
     val realtimeMsg: String = "",
-    val direction: Int = 1
+    val direction: Int = 1,
+    val etas: Map<String, String> = emptyMap()
 )
 
 class RouteViewModel(private val api: BusApi = BusApi()) : ViewModel() {
@@ -484,13 +485,22 @@ class RouteViewModel(private val api: BusApi = BusApi()) : ViewModel() {
                 _state.value = _state.value.copy(realtimeMsg = res.msg)
                 return@launch
             }
+            val targets = buses
+                .filter { it.statusType != "0" && it.index >= 0 && it.busNumber.isNotBlank() }
+                .associate { it.busNumber to it.index + 1 }
+            val etas = if (targets.isEmpty()) {
+                emptyMap()
+            } else {
+                runCatching { api.busEtas(city, line, direction, targets) }.getOrDefault(emptyMap())
+            }
             _state.value = _state.value.copy(
                 buses = buses,
                 speeds = res.speedlist,
                 arrived = RouteRows.arrivedStations(buses),
                 upcoming = RouteRows.approachingStations(buses, _state.value.detail),
                 realtimeMsg = res.msg,
-                direction = direction
+                direction = direction,
+                etas = etas
             )
         }
     }

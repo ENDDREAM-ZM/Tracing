@@ -52,7 +52,8 @@ object RouteRows {
     fun build(
         detail: com.enddream.tracing.data.api.RouteDetail?,
         buses: List<com.enddream.tracing.data.api.RealBus>,
-        speeds: List<com.enddream.tracing.data.api.SpeedItem>
+        speeds: List<com.enddream.tracing.data.api.SpeedItem>,
+        etas: Map<String, String> = emptyMap()
     ): List<RailRow> {
         val stations = detail?.data.orEmpty()
         if (stations.isEmpty()) return emptyList()
@@ -101,7 +102,12 @@ object RouteRows {
                     RailRow.Vehicle(
                         id = "mv-$p-${b.busNumber}",
                         label = b.busNumber.ifBlank { "车辆" },
-                        detail = "行驶中 · ${b.busToStationNiheDistance.toInt()}m",
+                        detail = listOfNotNull(
+                            "行驶中",
+                            etas[b.busNumber]?.takeIf { it.isNotBlank() }
+                                ?: etaText(b.busToStationNiheDistance, speeds, p),
+                            "${b.busToStationNiheDistance.toInt()}m"
+                        ).joinToString(" · "),
                         color = segColor(p),
                         atStation = false
                     )
@@ -109,6 +115,18 @@ object RouteRows {
             }
         }
         return out
+    }
+
+    private fun etaText(distance: Double, speeds: List<com.enddream.tracing.data.api.SpeedItem>, seg: Int): String? {
+        if (distance <= 0.0) return null
+        val v = speeds.getOrNull(seg)?.speed ?: 0.0
+        if (v <= 0.0) return null
+        val minutes = distance / v
+        return when {
+            minutes < 1.0 -> "小于1分钟"
+            minutes < 60.0 -> "${Math.round(minutes)}分钟"
+            else -> "${Math.round(minutes) / 60}小时${Math.round(minutes) % 60}分钟"
+        }
     }
 
     fun arrivedStations(buses: List<com.enddream.tracing.data.api.RealBus>): Set<String> =

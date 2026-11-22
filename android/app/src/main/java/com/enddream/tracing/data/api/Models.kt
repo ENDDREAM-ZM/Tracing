@@ -138,7 +138,9 @@ data class RouteOnStation(
     val busToStationTime: Double = 0.0,
     val busToStationDistance: Double = 0.0,
     val busToStationTips: String = "",
-    val busToStationName: String = "",
+    val busToStationTimeTips: String = "",
+    val busToStationDistanceTips: String = "",
+    val busNumber: String = "",
     val toStationName: String = "",
     val frmStationName: String = ""
 )

@@ -1,6 +1,9 @@
 package com.enddream.tracing.data.api
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -122,6 +125,40 @@ class BusApi {
             AppJson.decodeFromJsonElement<List<RealBus>>(root["list"] ?: JsonArray(emptyList()))
         }.getOrDefault(emptyList())
         return decoded.copy(listBuses = buses)
+    }
+
+    suspend fun busEtas(
+        cityName: String,
+        lineName: String,
+        direction: Int,
+        targets: Map<String, Int>
+    ): Map<String, String> = withContext(Dispatchers.IO) {
+        val wanted = targets.filter { it.key.isNotBlank() && it.value > 0 }
+        if (wanted.isEmpty()) return@withContext emptyMap()
+        val out = java.util.concurrent.ConcurrentHashMap<String, String>()
+        coroutineScope {
+            wanted.entries.take(16).map { (busNumber, order) ->
+                async {
+                    val raw = runCatching {
+                        post(
+                            form(
+                                "CMD" to Cmd.REALTIME.toString(),
+                                "CITYNAME" to cityName,
+                                "LINENAME" to lineName,
+                                "DIRECTION" to direction.toString(),
+                                "STATIONORDER" to order.toString()
+                            )
+                        )
+                    }.getOrNull() ?: return@async
+                    val info = runCatching { decode<RealtimeResponse>(raw) }.getOrNull() ?: return@async
+                    val tip = info.routeOnStationRTimeInfoList
+                        .firstOrNull { it.busNumber == busNumber }
+                        ?.busToStationTimeTips?.trim().orEmpty()
+                    if (tip.isNotBlank()) out[busNumber] = tip
+                }
+            }.awaitAll()
+        }
+        out.toMap()
     }
 
     suspend fun linesByStation(

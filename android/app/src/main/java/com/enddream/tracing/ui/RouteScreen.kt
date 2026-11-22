@@ -95,7 +95,7 @@ fun RouteScreen(
     LaunchedEffect(highlightStation, state.detail, state.buses) {
         val target = picked.ifBlank { highlightStation } ?: return@LaunchedEffect
         if (state.detail == null) return@LaunchedEffect
-        val rows = RouteRows.build(state.detail, state.buses, state.speeds)
+        val rows = RouteRows.build(state.detail, state.buses, state.speeds, state.etas)
         val idx = rows.indexOfFirst {
             it is com.enddream.tracing.data.RailRow.Station && it.name == target
         }
@@ -295,8 +295,8 @@ fun RouteScreen(
                                 .weight(1f),
                             shape = RoundedCornerShape(20.dp)
                         ) {
-                            val rows = remember(d, state.buses, state.speeds) {
-                                RouteRows.build(d, state.buses, state.speeds)
+                            val rows = remember(d, state.buses, state.speeds, state.etas) {
+                                RouteRows.build(d, state.buses, state.speeds, state.etas)
                             }
                             PullRefresh(
                                 refreshing = state.loading,
