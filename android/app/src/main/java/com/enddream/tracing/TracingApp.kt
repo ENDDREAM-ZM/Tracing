@@ -11,14 +11,23 @@ class TracingApp : Application() {
         super.onCreate()
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            runCatching {
+            val text = runCatching {
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
-                File(filesDir, "crash.txt").writeText(sw.toString())
+                sw.toString()
+            }.getOrDefault("")
+            runCatching {
+                File(filesDir, "crash.txt").writeText(text)
+            }
+            if (touchesAmap(text) || AmapLoc.wasInflight(applicationContext)) {
+                runCatching { AmapLoc.markBroken(applicationContext) }
             }
             prev?.uncaughtException(thread, throwable)
         }
     }
+
+    private fun touchesAmap(text: String): Boolean =
+        text.contains("com.amap.") || text.contains("com.loc.") || text.contains("com.autonavi.")
 
     companion object {
         fun lastCrash(app: Application): String? = runCatching {

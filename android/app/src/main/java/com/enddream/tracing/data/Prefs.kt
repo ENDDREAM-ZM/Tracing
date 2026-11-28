@@ -36,6 +36,8 @@ object Prefs {
     private val KEY_METRO_NOTICE = booleanPreferencesKey("metro_notice_off")
     private val KEY_CITY_SET = booleanPreferencesKey("city_set")
     private val KEY_RT_ORIENT = stringPreferencesKey("rt_orientation")
+    private val KEY_AMAP_AGREE = booleanPreferencesKey("amap_agree")
+    private val KEY_AMAP_ASKED = booleanPreferencesKey("amap_asked")
 
     private val json = Json { ignoreUnknownKeys = true }
     private val favSerializer = ListSerializer(Favorite.serializer())
@@ -135,5 +137,19 @@ object Prefs {
 
     suspend fun setNotifyEnabled(ctx: Context, on: Boolean) {
         ctx.dataStore.edit { it[KEY_NOTIFY] = on }
+    }
+
+    suspend fun amapAgree(ctx: Context): Boolean =
+        ctx.dataStore.data.first()[KEY_AMAP_AGREE] ?: false
+
+    suspend fun setAmapAgree(ctx: Context, on: Boolean) {
+        ctx.dataStore.edit { it[KEY_AMAP_AGREE] = on }
+    }
+
+    suspend fun amapAsked(ctx: Context): Boolean =
+        ctx.dataStore.data.first()[KEY_AMAP_ASKED] ?: false
+
+    suspend fun setAmapAsked(ctx: Context, on: Boolean) {
+        ctx.dataStore.edit { it[KEY_AMAP_ASKED] = on }
     }
 }

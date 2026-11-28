@@ -21,9 +21,11 @@ android {
         applicationId = "com.enddream.tracing"
         minSdk = 28
         targetSdk = 36
-        versionCode = 321
-        versionName = "1.5.1"
+        versionCode = 322
+        versionName = "1.5.2"
         vectorDrawables.useSupportLibrary = true
+        manifestPlaceholders["amapKey"] =
+            keystoreProps.getProperty("amapKey") ?: "00000000000000000000000000000000"
     }
 
     signingConfigs {
@@ -92,4 +94,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.github.kyant0:backdrop:1.0.6")
+    implementation(files("libs/amap-location-11.3.101.jar"))
+    implementation(files("libs/amap-search-9.7.1.jar"))
 }

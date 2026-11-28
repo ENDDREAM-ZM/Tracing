@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import com.enddream.tracing.AmapBus
 import com.enddream.tracing.data.RouteCache
 import com.enddream.tracing.data.api.BusApi
 import com.enddream.tracing.data.api.DepartGroup
@@ -45,9 +47,12 @@ fun BusTimetableScreen(
     direction: Int,
     onBack: () -> Unit
 ) {
+    val ctx = LocalContext.current
     var detail by remember(line, direction) { mutableStateOf<RouteDetail?>(null) }
     var groups by remember(line, direction) { mutableStateOf<List<DepartGroup>>(emptyList()) }
     var loading by remember(line, direction) { mutableStateOf(true) }
+    var amapLine by remember(line, direction) { mutableStateOf<AmapBus.Line?>(null) }
+    var amapTried by remember(line, direction) { mutableStateOf(false) }
 
     LaunchedEffect(city, line, direction) {
         loading = true
@@ -59,6 +64,11 @@ fun BusTimetableScreen(
         } else emptyList()
         groups = list
         loading = false
+        val from = d?.data?.firstOrNull()?.let { it.stationName.ifBlank { it.showName } }.orEmpty()
+        val to = d?.data?.lastOrNull()?.let { it.stationName.ifBlank { it.showName } }.orEmpty()
+        val hits = runCatching { AmapBus.search(ctx, city, line) }.getOrDefault(emptyList())
+        amapLine = hits.firstOrNull { AmapBus.matches(it, from, to) } ?: hits.firstOrNull()
+        amapTried = true
     }
 
     val start = detail?.data?.firstOrNull()?.let { it.stationName.ifBlank { it.showName } }.orEmpty()
@@ -126,6 +136,49 @@ fun BusTimetableScreen(
                             fontSize = 10.sp,
                             color = TextMuted
                         )
+                    }
+                }
+            }
+
+            amapLine?.let { a ->
+                Spacer(Modifier.height(10.dp))
+                GlassPanel(
+                    modifier = Modifier
+                        .padding(horizontal = 14.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(
+                            "高德公交信息",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TimeBadge(true, a.first.ifBlank { "—" }, 11)
+                            Spacer(Modifier.width(10.dp))
+                            TimeBadge(false, a.last.ifBlank { "—" }, 11)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                listOfNotNull(
+                                    a.price.takeIf { it.isNotBlank() },
+                                    "${a.stationCount} 站".takeIf { a.stationCount > 0 }
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
+                        if (a.company.isNotBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                a.company,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
                     }
                 }
             }

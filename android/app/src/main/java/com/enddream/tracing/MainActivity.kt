@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -158,6 +159,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     var locating by remember { mutableStateOf(false) }
     var favorites by remember { mutableStateOf(emptyList<com.enddream.tracing.data.Favorite>()) }
     var locateTick by remember { mutableStateOf(0) }
+    var locateMaxAge by remember { mutableStateOf(60_000L) }
     var autoEnter by remember { mutableStateOf(true) }
     var firstRun by remember { mutableStateOf(false) }
     var askPerm by remember { mutableStateOf(false) }
@@ -165,6 +167,8 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
     var refreshSec by remember { mutableStateOf(10) }
     var floatBar by remember { mutableStateOf(true) }
     var notifyOn by remember { mutableStateOf(false) }
+    var amapAgree by remember { mutableStateOf(false) }
+    var amapAsked by remember { mutableStateOf(true) }
     var allCities by remember { mutableStateOf(emptyList<String>()) }
 
     val busVm: BusViewModel = viewModel()
@@ -173,6 +177,12 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
 
     fun toast(msg: String) {
         android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    fun locateNow(maxAgeMs: Long = 60_000L) {
+        if (locating) return
+        locateMaxAge = maxAgeMs
+        locateTick++
     }
 
     val navigate: (Double, Double, String) -> Unit = { lat, lng, name ->
@@ -257,9 +267,25 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             firstRun = true
             autoEnter = true
         }
+        runCatching {
+            TracingApp.clearCrash(
+                ctx.applicationContext as android.app.Application
+            )
+        }
         refreshSec = runCatching { Prefs.refreshSec(ctx) }.getOrDefault(10)
         floatBar = runCatching { Prefs.floatBar(ctx) }.getOrDefault(true)
         notifyOn = runCatching { Prefs.notifyEnabled(ctx) }.getOrDefault(false)
+        amapAgree = runCatching { Prefs.amapAgree(ctx) }.getOrDefault(false)
+        val amapDied = AmapLoc.wasInflight(ctx)
+        if (amapAgree && (amapDied || AmapLoc.isBroken(ctx))) {
+            amapAgree = false
+            runCatching { Prefs.setAmapAgree(ctx, false) }
+            AmapLoc.clearBroken(ctx)
+            toast("上次高德定位异常，已退回系统定位")
+        }
+        AmapLoc.clearInflight(ctx)
+        amapAsked = runCatching { Prefs.amapAsked(ctx) }.getOrDefault(false)
+        if (amapAgree) runCatching { AmapLoc.init(ctx) }
         if (notifyOn) ensureNotifyPermission()
         prefsLoaded = true
     }
@@ -281,19 +307,19 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             return@LaunchedEffect
         }
         locating = true
-        val pos = withContext(Dispatchers.IO) { Locate.current(ctx) }
+        val pos = withContext(Dispatchers.IO) { Locate.current(ctx, maxAgeMs = locateMaxAge) }
         if (pos == null) {
             locating = false
             toast("定位失败，请检查系统定位开关")
             return@LaunchedEffect
         }
-        busVm.locate(pos.first, pos.second)
+        busVm.locate(pos.lng, pos.lat)
         val cities = withTimeoutOrNull(1500) {
             while (allCities.isEmpty()) kotlinx.coroutines.delay(60)
             allCities
         } ?: allCities
         if (cities.isNotEmpty()) {
-            val hits = withContext(Dispatchers.IO) { Locate.candidates(ctx, pos.second, pos.first) }
+            val hits = withContext(Dispatchers.IO) { Locate.candidates(ctx, pos.lat, pos.lng) }
             val hit = hits.firstNotNullOfOrNull { c ->
                 cities.firstOrNull { it == c }
                     ?: cities.firstOrNull { it.removeSuffix("市") == c.removeSuffix("市") }
@@ -311,7 +337,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                     scope.launch { Prefs.setCity(ctx, hit) }
                     busVm.setCity(hit)
                     busVm.loadAll()
-                    busVm.locate(pos.first, pos.second)
+                    busVm.locate(pos.lng, pos.lat)
                 }
             }
         }
@@ -337,6 +363,46 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
             while (true) {
                 kotlinx.coroutines.delay(refreshSec * 1000L)
                 busVm.refreshNearby()
+            }
+        }
+    }
+
+    if (prefsLoaded && !amapAsked) {
+        com.enddream.tracing.ui.GlassDialog(
+            onDismissRequest = {},
+            title = "定位服务说明",
+            subtitle = "追迹使用高德定位 SDK 提供位置服务",
+            buttons = {
+                com.enddream.tracing.ui.GlassDialogButton("暂不使用") {
+                    amapAsked = true
+                    scope.launch { Prefs.setAmapAsked(ctx, true) }
+                }
+                Spacer(Modifier.width(8.dp))
+                com.enddream.tracing.ui.GlassDialogButton("同意并启用") {
+                    amapAgree = true
+                    amapAsked = true
+                    scope.launch {
+                        Prefs.setAmapAsked(ctx, true)
+                        Prefs.setAmapAgree(ctx, true)
+                        Locate.clearCache()
+                    }
+                    AmapLoc.init(ctx)
+                    locateTick++
+                }
+            }
+        ) {
+            Column {
+                Text(
+                    "高德定位 SDK 会收集设备信息、网络信息与位置信息，用于快速定位和地址解析。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = com.enddream.tracing.ui.TextSecondary
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "不同意时追迹退回系统定位，功能仍可用但精度较低。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = com.enddream.tracing.ui.TextMuted
+                )
             }
         }
     }
@@ -405,10 +471,10 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                                     ln.to
                                 )
                             },
-                            onLocate = { locateTick++ },
+                            onLocate = { locateNow() },
                             onPullRefresh = {
                                 busVm.refresh()
-                                locateTick++
+                                if (state.nearbyDetail.isEmpty()) locateNow()
                             },
                             onLoadCurrent = { ln, d -> busVm.loadOtherCurrent(ln, d) }
                         )
@@ -428,7 +494,7 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                             city = city,
                             nearby = busState.nearbyDetail.map { it.station },
                             onOpen = { lat, lng, name -> navigate(lat, lng, name) },
-                            onLocate = { locateTick++ }
+                            onLocate = { locateNow() }
                         )
                     }
 
@@ -445,6 +511,18 @@ private fun App(themeMode: String, onThemePicked: (String) -> Unit) {
                             notifyOn = on
                             scope.launch { Prefs.setNotifyEnabled(ctx, on) }
                             if (on) ensureNotifyPermission()
+                        },
+                        amapAgree = amapAgree,
+                        onAmapChange = { on ->
+                            amapAgree = on
+                            scope.launch {
+                                Prefs.setAmapAgree(ctx, on)
+                                Locate.clearCache()
+                                if (on) AmapLoc.init(ctx)
+                            }
+                            if (on) {
+                                locateNow(maxAgeMs = 0L)
+                            }
                         },
                         themeMode = themeMode,
                         floatBar = floatBar,

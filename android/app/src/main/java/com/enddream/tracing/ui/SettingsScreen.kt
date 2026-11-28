@@ -37,17 +37,20 @@ fun SettingsScreen(
     city: String,
     refreshSec: Int,
     notifyOn: Boolean,
+    amapAgree: Boolean,
     themeMode: String,
     floatBar: Boolean,
     onPickCity: () -> Unit,
     onRefreshChange: (Int) -> Unit,
     onNotifyChange: (Boolean) -> Unit,
+    onAmapChange: (Boolean) -> Unit,
     onThemeChange: (String) -> Unit,
     onFloatBarChange: (Boolean) -> Unit,
 ) {
     var showSources by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
     var showPerms by remember { mutableStateOf(false) }
+    var showGeo by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
     val versionName = runCatching {
         val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
@@ -93,6 +96,17 @@ fun SettingsScreen(
                 checked = notifyOn,
                 onChange = onNotifyChange
             )
+        }
+
+        Group("定位") {
+            ToggleRow(
+                title = "高德定位",
+                subtitle = "使用高德定位SDK来进行定位，关闭后使用系统定位",
+                checked = amapAgree,
+                onChange = onAmapChange
+            )
+            RowDivider()
+            LinkRow("位置信息说明", "查看") { showGeo = true }
         }
 
         Group("关于") {
@@ -160,6 +174,41 @@ fun SettingsScreen(
         }
     }
 
+    if (showGeo) {
+        GlassDialog(
+            onDismissRequest = { showGeo = false },
+            title = "位置信息",
+            subtitle = "追迹如何获取和使用位置",
+            buttons = {
+                GlassDialogButton("知道了") { showGeo = false }
+            }
+        ) {
+            Column {
+                listOf(
+                    "定位来源" to "高德定位 SDK",
+                    "使用目的" to "识别城市、查找附近站点与车辆距离",
+                    "收集内容" to "位置、设备与网络信息",
+                    "后台使用" to "不在后台定位"
+                ).forEach { (k, v) ->
+                    Row(Modifier.padding(vertical = 3.dp)) {
+                        Text(
+                            k,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted,
+                            modifier = Modifier.width(80.dp)
+                        )
+                        Text(
+                            v,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     if (showSources) {
         GlassDialog(
             onDismissRequest = { showSources = false },
@@ -170,12 +219,12 @@ fun SettingsScreen(
         ) {
             Column {
                 listOf(
-                    "公交数据" to "掌上公交 h5.mygolbs.com",
-                    "地铁线网" to "高德地图 webapi.amap.com",
-                    "地铁首末班" to "高德地图 subway/data",
-                    "地铁公告" to "高德地图 subway/busExt",
-                    "地铁城市表" to "掌上公交 metro.mygolbs.com",
-                    "定位" to "Android 系统定位服务",
+                    "公交数据" to "掌上公交",
+                    "地铁线网" to "高德地图",
+                    "地铁首末班" to "高德地图",
+                    "地铁公告" to "高德地图",
+                    "地铁城市表" to "掌上公交",
+                    "定位" to "高德定位 SDK 与系统定位",
                     "导航" to "已安装的地图应用"
                 ).forEach { (k, v) ->
                     Row(Modifier.padding(vertical = 3.dp)) {
