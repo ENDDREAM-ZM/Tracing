@@ -18,10 +18,6 @@
 - Android 9 及以上（minSdk 28）
 - targetSdk 36
 
-## Install
-
-下载 `Tracing-x.y.z.apk` 直接安装。
-
 ## Download
 
 见 Releases。
@@ -41,7 +37,7 @@ gradle :app:assembleRelease
 amapKey=你的Key
 ```
 
-没有配置时构建仍可通过，但定位不可用（会回退系统定位）。直接使用 Releases 里的 APK 不需要任何配置。
+没有配置时构建仍可通过，但高德定位不可用（会回退系统定位）。
 
 ## Credits
 
