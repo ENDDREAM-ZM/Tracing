@@ -20,7 +20,7 @@
 
 ## Download
 
-见 Releases。
+见 [Releases](https://github.com/ENDDREAM-ZM/Tracing/releases)
 
 ## Build
 
